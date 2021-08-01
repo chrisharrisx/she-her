@@ -252,30 +252,53 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
     end,
     change_chord = function(self, state)
       if (state.active_paramSet == 3 and state.active_param ~= 3) or state.active_paramSet ~= 3  then
-        if math.random(100) <= state.globals.get_chord_chance() and c > 1 then
+        
+        --[[
+            At the interval specified, generate a new root and chord for track 1 (unless track 1 chord type is set to fixed).
+            If track 1 chord type is set to root, only a new root will be generated, chord type will stay fixed.
+            Followers will simultaneously update with:
+              – a new root unless chord type of follower is set to fixed
+              – a new chord if track 1 chord type AND follower chord type are not set to root or fixed
+        --]]
+        
+        k = HarmonyUtil.getKey()
+        r = self:get_root_note()
+        c = self:get_chord()
+        
+        if math.random(100) <= state.globals.get_chord_chance() and c > 1 and self.title == 'track 1' then
+          print(self.title)
           change = HarmonyUtil.getRandDiatonicChordChange()
           
           if change ~= nil then
-            r = change[1]
-            c = change[2]
-            scale = ChordUtil.getScaleForChord(c)
-            self:set_root_note(r)
-            self:set_chord(c)
-            state.track_1_root = r
-            state.track_1_chord = c
+            current_root = state.tracks[1]:get_root_note()
+            current_octave = ChordUtil.getOctaveOfRoot(current_root)
+            new_root = change[1]
+            new_octave = ChordUtil.getOctaveOfRoot(new_root)
+            octave_diff = current_octave - new_octave
+            
+            n = new_root + (12 * octave_diff)
+            self:set_root_note(n)
+            state.track_1_root = new_root
+            
+            if c > 2 then
+              local ch = change[2]
+              scale = ChordUtil.getScaleForChord(ch)
+              self:set_chord(ch)
+              state.track_1_chord = ch
+            end
           end
         end
         
         if state.globals.get_follow_state() == 1 then
-          for i = 1, #state.tracks do
-            if state.tracks[i]:get_chord() ~= 1 then
+          for i = 2, #state.tracks do
+            if state.tracks[i]:get_chord() > 1 then
               current_root = state.tracks[i]:get_root_note()
               current_octave = ChordUtil.getOctaveOfRoot(current_root)
               new_root = state.track_1_root
               new_octave = ChordUtil.getOctaveOfRoot(new_root)
               octave_diff = current_octave - new_octave
               
-              if state.tracks[i]:get_chord() > 2 then
+              if state.tracks[i]:get_chord() > 2 and state.tracks[1]:get_chord() > 2 then
                 ct = state.track_1_chord
                 state.tracks[i]:set_chord(ct)
                 scale = ChordUtil.getScaleForChord(ct)
@@ -295,7 +318,7 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
       t = self:get_play_mode() -- playback mode (arp up, arp down, arp random, chord)
       scale = ChordUtil.getScaleForChord(c)
       
-      if c == 1 then -- return root note
+      if c <= 2 then -- return root note
         return r
       end
       
