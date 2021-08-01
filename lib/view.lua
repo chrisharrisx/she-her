@@ -247,7 +247,8 @@ end
 
 function View.sequenceEdit(state)
   screen.clear()
-  
+
+  -- tempo
   current_x = x_start
   current_y = y_start
   screen.move(current_x, current_y)
@@ -257,15 +258,28 @@ function View.sequenceEdit(state)
   
   current_x = 35
   screen.move(current_x, current_y)
-  -- tempo
   screen.level(state.paramSet == 1 and state.active_paramSet == 1 and state.active_param == 2 and 15 or 2)
   screen.text(state.globals.get_tempo())
-  
+
+  -- mode
   current_x = x_start
   current_y = 20
   screen.move(current_x, current_y)
-  -- reset
+
   screen.level(state.paramSet == 2 and state.active_paramSet == 1 and state.active_param == 1 and 15 or 2)
+  screen.text('mode')
+
+  current_x = 35
+  screen.move(current_x, current_y)
+  screen.level(state.paramSet == 2 and state.active_paramSet == 2 and state.active_param == 2 and 15 or 2)
+  mode = state.globals.get_sequence_mode() == 0 and 'normal' or 'chain'
+  screen.text(mode)
+
+  -- reset
+  current_x = x_start
+  current_y = 30
+  screen.move(current_x, current_y)
+  screen.level(state.paramSet == 3 and state.active_paramSet == 1 and state.active_param == 1 and 15 or 2)
   screen.text('reset')
   
   screen.update()

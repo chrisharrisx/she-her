@@ -81,18 +81,26 @@ local key_actions = {
       
     },
     {-- key = 2
-      -- param = 1
       function(state)
         state.view = 3
         state.key = 0
       end,
       function(state)
-        state.active_param = 1
+        if state.active_param > 1 then
+          state.active_param = state.active_param - 1
+        end
+        if state.active_param == 1 then
+          state.active_paramSet = 1
+        end
         state.key = 0
       end
     },
     {-- key = 3
-      -- param = 1
+      function(state)
+        state.active_paramSet = state.paramSet
+        state.active_param = 2
+        state.key = 0
+      end,
       function(state)
         if state.paramSet ~= 2 then
           state.active_paramSet = 1
