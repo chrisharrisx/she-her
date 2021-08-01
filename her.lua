@@ -53,15 +53,11 @@ started_chaining = false
 
 function init()
   params:set("clock_tempo", state.globals.get_tempo())
-  
-  if state.globals.chain() then
-    clock.run(tick_chain)
-  else
-    clock.run(tick, 1)
-    clock.run(tick, 2)
-    clock.run(tick, 3)
-    clock.run(tick, 4)
-  end
+
+  clock.run(tick, 1)
+  clock.run(tick, 2)
+  clock.run(tick, 3)
+  clock.run(tick, 4)
   
   -- midi_in.event = midi_event
 end
@@ -69,29 +65,32 @@ end
 function tick(trackNum)
   while true do
     clock.sync(state.tracks[trackNum]:get_division_value())
-    if state.buffer.loop == 0 then
-      read_from_track(trackNum)
-    else 
-      read_from_buffer(trackNum)
-    end
-    redraw()
-  end
-end
-
-function tick_chain()
-  while true do
-    local chain_position = state.globals.get_chain_position()
-    local active_track = state.tracks[chain_position]
-    clock.sync(active_track:get_division_value())
-    read_from_track(chain_position)
-    
-    if active_track:get_position() == active_track:get_length() then
-      if chain_position < #state.tracks then
-        state.globals.set_chain_position(chain_position + 1)
+  
+    if state.globals.chain() and trackNum == 1 then
+      -- chain mode
+      local chain_position = state.globals.get_chain_position()
+      local active_track = state.tracks[chain_position]
+      if state.buffer.loop == 0 then
+        read_from_track(chain_position)
+        if active_track:get_position() == active_track:get_length() then
+          if chain_position < #state.tracks then
+            state.globals.set_chain_position(chain_position + 1)
+          else
+            state.globals.set_chain_position(1)
+          end
+        end
       else
-        state.globals.set_chain_position(1)
+        read_from_buffer(chain_position)
+      end
+    elseif not state.globals.chain() then
+      -- normal mode
+      if state.buffer.loop == 0 then
+        read_from_track(trackNum)
+      else
+        read_from_buffer(trackNum)
       end
     end
+    redraw()
   end
 end
 
