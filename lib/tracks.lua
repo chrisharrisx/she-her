@@ -251,16 +251,14 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
       end
     end,
     change_chord = function(self, state)
+    --[[  At the interval specified, generate a new root and chord for track 1
+          (unless track 1 chord type is set to fixed).
+          If track 1 chord type is set to root, only a new root will be generated, chord type will stay fixed.
+          Followers will simultaneously update with:
+            – a new root unless chord type of follower is set to fixed
+            – a new chord if track 1 chord type AND follower chord type are not set to root or fixed  --]]
+      
       if (state.active_paramSet == 3 and state.active_param ~= 3) or state.active_paramSet ~= 3  then
-        
-        --[[
-            At the interval specified, generate a new root and chord for track 1 (unless track 1 chord type is set to fixed).
-            If track 1 chord type is set to root, only a new root will be generated, chord type will stay fixed.
-            Followers will simultaneously update with:
-              – a new root unless chord type of follower is set to fixed
-              – a new chord if track 1 chord type AND follower chord type are not set to root or fixed
-        --]]
-        
         k = HarmonyUtil.getKey()
         r = self:get_root_note()
         c = self:get_chord()
