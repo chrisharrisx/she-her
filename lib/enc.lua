@@ -192,7 +192,7 @@ local enc_actions = {
       
     },
     {-- encoder = 2
-      {-- paramSet = 1
+      {-- tempo
         function(state, d) -- choose paramSet
           state.paramSet = util.clamp(state.paramSet + d, 1, #state.globals.paramSets[sequenceParams].params)
         end,
@@ -203,7 +203,12 @@ local enc_actions = {
         end
       },
       {-- paramSet = 2
-        
+        function(state, d) end,
+        function(state, d)
+          m = state.globals.get_sequence_mode()
+          m = util.clamp(m + d, 0, 1)
+          state.globals.set_sequence_mode(m)
+        end
       }
     }
   },
