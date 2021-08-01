@@ -264,7 +264,6 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
         c = self:get_chord()
         
         if math.random(100) <= state.globals.get_chord_chance() and c > 1 and self.title == 'track 1' then
-          print(self.title)
           change = HarmonyUtil.getRandDiatonicChordChange()
           
           if change ~= nil then
