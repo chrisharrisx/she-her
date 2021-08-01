@@ -5,12 +5,15 @@ local Globals = {
   paramSets = {
     {
       title = 'sequence',
-      chain = true,
+      chain = 0,
       chain_position = 1,
       params = {
         { 
           title = 'tempo',
           values = { 120 }
+        },
+        {
+
         },
         {
           title = 'reset'
@@ -67,11 +70,18 @@ function Globals.set_tempo(t)
 end
 
 function Globals.chain()
+  if Globals.paramSets[sequenceParams].chain == 1 then
+    return true
+  end
+  return false
+end
+
+function Globals.get_sequence_mode()
   return Globals.paramSets[sequenceParams].chain
 end
 
-function Globals.set_chain()
-  Globals.paramSets[sequenceParams].chain = not Globals.paramSets[sequenceParams].chain
+function Globals.set_sequence_mode(m)
+  Globals.paramSets[sequenceParams].chain = m
 end
 
 function Globals.get_chain_position()
