@@ -81,14 +81,29 @@ ChordUtil.playMode = {
 }
 
 ChordUtil.shifts = {
-  '2nd',
-  '3rd',
-  '4th',
-  '5th',
-  '6th',
-  '7th',
+  'm2',
+  'M2',
+  'm3',
+  'M3',
+  'P4',
+  '#4',
+  'P5',
+  'm6',
+  'M6',
+  'm7',
+  'M7',
   '8va'
 }
+
+-- ChordUtil.shifts = {
+--   '2nd',
+--   '3rd',
+--   '4th',
+--   '5th',
+--   '6th',
+--   '7th',
+--   '8va'
+-- }
 
 ChordUtil.inversion = {
   'dr3',

@@ -16,6 +16,11 @@ function set_loop_length(state, d)
   state.buffer.length = util.clamp(state.buffer.length + d, 1, 64)
 end
 
+function set_loop_start(state, d)
+  state.buffer.start = util.clamp(state.buffer.start + d, 1, 64 - state.buffer.length)
+  state.buffer.start_changed = 1
+end
+
 local enc_actions = {
   {-- VIEW 1 - her - track selection
     {-- encoder = 1
@@ -92,7 +97,11 @@ local enc_actions = {
         function(state, d) -- edit chord
           active_track = state.tracks[state.active_track]
           ch = active_track:get_chord()
-          active_track:set_chord(util.clamp(ch + d, 1, #ChordUtil.chords))
+          new_ch = util.clamp(ch + d, 1, #ChordUtil.chords)
+          active_track:set_chord(new_ch)
+          if state.active_track == 1 then
+            state.track_1_chord = new_ch
+          end
         end,
         function(state, d) -- edit chord type
           active_track = state.tracks[state.active_track]
@@ -248,8 +257,10 @@ function do_enc_action(state, n, d)
   if n == 1 then
     if state.alt == 0 and state.sync == 0 then
       state.sync = clock.run(set_loop_state, state, d)
-    elseif state.alt == 1 then
+    elseif state.alt == 1 and state.key == 1 then
       set_loop_length(state, d)
+    elseif state.alt == 1 and state.key == 2 then
+      set_loop_start(state, d)
     end
   else
     handler = state.active_paramSet == 2 and 1 or state.active_param

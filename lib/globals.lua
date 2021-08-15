@@ -70,10 +70,11 @@ function Globals.set_tempo(t)
 end
 
 function Globals.chain()
-  if Globals.paramSets[sequenceParams].chain == 1 then
-    return true
-  end
-  return false
+  -- if Globals.paramSets[sequenceParams].chain == 1 then
+  --   return true
+  -- end
+  -- return false
+  return Globals.paramSets[sequenceParams].chain
 end
 
 function Globals.get_sequence_mode()

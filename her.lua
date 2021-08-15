@@ -62,16 +62,20 @@ function init()
   -- midi_in.event = midi_event
 end
 
+-- printed = false
+
 function tick(trackNum)
   while true do
     clock.sync(state.tracks[trackNum]:get_division_value())
   
-    if state.globals.chain() and trackNum == 1 then
+    if state.globals.chain() == 1 and trackNum == 1 then
       -- chain mode
       local chain_position = state.globals.get_chain_position()
       local active_track = state.tracks[chain_position]
+      
+      -- print('chain position:' .. chain_position, 'active track position:' .. active_track:get_position())
+      
       if state.buffer.loop == 0 then
-        read_from_track(chain_position)
         if active_track:get_position() == active_track:get_length() then
           if chain_position < #state.tracks then
             state.globals.set_chain_position(chain_position + 1)
@@ -79,10 +83,52 @@ function tick(trackNum)
             state.globals.set_chain_position(1)
           end
         end
+      elseif state.buffer.loop == 1 then
+        -- print('current track: ' .. chain_position, 'position: ' .. active_track:get_position())
+        -- if active_track:get_position() == state.buffer.length then
+        --   if chain_position < #state.tracks then
+        --     state.globals.set_chain_position(chain_position + 1)
+        --   else
+        --     state.globals.set_chain_position(1)
+        --   end          
+        -- end
+      end
+      
+      -- if (state.buffer.loop == 0 and state.buffer.length >= active_track:get_length() and active_track:get_position() == active_track:get_length()) or
+      --   (state.buffer.loop == 1 and state.buffer.length < active_track:get_length() and state.buffer.get_read_position(chain_position) == state.buffer.length) then
+      --   if chain_position < #state.tracks then
+      --     state.globals.set_chain_position(chain_position + 1)
+      --   else
+      --     state.globals.set_chain_position(1)
+      --   end
+      -- end
+      
+      buffer_string = ''
+      
+      if state.buffer.loop == 0 then
+        read_from_track(chain_position)
       else
+        -- if not printed then
+        --   printed = true
+          
+        --   for i = 1, #state.buffer do
+        --     buffer_string = buffer_string .. "{"
+        --     for j = 1, #state.buffer[i] do
+        --       buffer_string = buffer_string .. "{"
+        --       for k = 1, #state.buffer[i][j] do
+        --         buffer_string = buffer_string .. state.buffer[i][j][k]
+        --       end
+        --       buffer_string = buffer_string .. "}"
+        --     end
+        --     buffer_string = buffer_string .. "}"
+        --     print(buffer_string)
+        --     buffer_string = ''
+        --   end
+        -- end
+        
         read_from_buffer(chain_position)
       end
-    elseif not state.globals.chain() then
+    elseif state.globals.chain() == 0 then
       -- normal mode
       if state.buffer.loop == 0 then
         read_from_track(trackNum)
@@ -141,7 +187,7 @@ function read_from_track(trackNum)
     state.buffer.write_buffer(trackNum, {})
   end
   
-  state.buffer.advance(trackNum)
+  state.buffer.advance(trackNum, state)
   state.tracks[trackNum]:set_position(position < state.tracks[trackNum]:get_length() and position + 1 or 1)
   state.tracks[trackNum]:set_octave_position(octave_position < state.tracks[trackNum]:get_octave_length() and octave_position + 1 or 1)
   
@@ -159,7 +205,9 @@ function read_from_track(trackNum)
 end
 
 function read_from_buffer(trackNum)
+  position = state.buffer.get_read_position(trackNum)
   values = state.buffer.read_buffer(trackNum)
+  
   if values ~= nil and #values > 1 then
     note = values[1]
     velocity = values[2]
@@ -192,7 +240,8 @@ function read_from_buffer(trackNum)
       end
     end
   end
-  state.buffer.advance(trackNum)
+  
+  state.buffer.advance(trackNum, state)
   state.tracks[trackNum]:set_position(position < state.tracks[trackNum]:get_length() and position + 1 or 1)
   state.tracks[trackNum]:set_octave_position(octave_position < state.tracks[trackNum]:get_octave_length() and octave_position + 1 or 1)
 end
@@ -205,13 +254,14 @@ function key(n, z)
   state.key = n
   state.alt = z
   state.keys[n] = z
-  if state.keys[1] == 1 and state.keys[2] and state.keys[3] == 1 then
+  if state.keys[1] == 1 and state.keys[2] == 1 and state.keys[3] == 1 then
     Buffer.clear()
     return
   end
-  if z ~= 1 and state.keys[1] ~= 1 then
+  if z ~= 1 and state.keys[1] ~= 1 and state.buffer.start_changed ~= 1 then
     do_key_action(state, n)
-  end 
+  end
+  state.buffer.start_changed = 0
   redraw()
 end
 

@@ -285,37 +285,36 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
             end
           end
         end
-        
-        if state.globals.get_follow_state() == 1 then
-          for i = 2, #state.tracks do
-            if state.tracks[i]:get_chord() > 1 then
-              current_root = state.tracks[i]:get_root_note()
-              current_octave = ChordUtil.getOctaveOfRoot(current_root)
-              new_root = state.track_1_root
-              new_octave = ChordUtil.getOctaveOfRoot(new_root)
-              octave_diff = current_octave - new_octave
-              
-              if state.tracks[i]:get_chord() > 2 and state.tracks[1]:get_chord() > 2 then
-                ct = state.track_1_chord
-                state.tracks[i]:set_chord(ct)
-                scale = ChordUtil.getScaleForChord(ct)
-              end
-      
-              n = new_root + (12 * octave_diff)
-              state.tracks[i]:set_root_note(n)
-            end
-          end
-        end
       end
     end,
+    follow = function(self, state)
+      current_root = self:get_root_note()
+      current_octave = ChordUtil.getOctaveOfRoot(current_root)
+      new_root = state.track_1_root
+      new_octave = ChordUtil.getOctaveOfRoot(new_root)
+      octave_diff = current_octave - new_octave
+      
+      if self:get_chord() > 2 and state.tracks[1]:get_chord() > 2 then
+        ct = state.track_1_chord
+        self:set_chord(ct)
+        scale = ChordUtil.getScaleForChord(ct)
+      end
+
+      n = new_root + (12 * octave_diff)
+      self:set_root_note(n)
+    end,
     get_notes = function(self, state)
+      if state.globals.get_follow_state() == 1 and self:get_chord() > 1 and self.title ~= 'track 1' then
+        self:follow(state)
+      end
+      
       k = HarmonyUtil.getKey()
       r = self:get_root_note()
       c = self:get_chord() -- diatonic chord
       t = self:get_play_mode() -- playback mode (arp up, arp down, arp random, chord)
       scale = ChordUtil.getScaleForChord(c)
       
-      if c <= 2 then -- return root note
+      if c == 1 then -- return fixed root note
         return r
       end
       
@@ -336,7 +335,7 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
         if t == 4 then -- chord
           return notes
         else -- arp
-          if c ~= 2 then
+          if c > 2 then
             return notes[current_arp_position]
           else
             return r
@@ -347,31 +346,30 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
           return ChordUtil.getInversionForChord(notes, op_multiple)
         else -- calculate shift for note
           if c == 2 then -- calculate root note + shift
-            index = 0
-            for i = 1, #scale do
-              if scale[i] == r - k then
-                index = i
-                break
-              end
-            end
-            shift = (op_degree - 1) * op_multiple
-            return scale[index + shift] + k
+            return self.shift_note(scale, r, k, op_degree, op_multiple)
           else -- calculate arp position + shift
-            index = 0
-            for i = 1, #scale do
-              if scale[i] == offsets[current_arp_position] then
-                index = i
-                break
-              end
-            end
-            shift = (op_degree - 1) * op_multiple
-            if index + shift <= #scale and index + shift > 0 then -- ensure shifted value is not outside of 0 - 127 MIDI note range
-              return scale[index + shift] + r
-            else
-              return scale[index] + r
-            end
+            return self.shift_arpeggio_note(scale, current_arp_position, op_degree, op_multiple, r)
           end
         end
+      end
+    end,
+    shift_note = function(scale, r, k, op_degree, op_multiple)
+      shift = (op_degree - 1) * op_multiple
+      return r + shift
+    end,
+    shift_arpeggio_note = function(scale, current_arp_position, op_degree, op_multiple, r)
+      index = 0
+      for i = 1, #scale do
+        if scale[i] == offsets[current_arp_position] then
+          index = i
+          break
+        end
+      end
+      shift = (op_degree - 1) * op_multiple
+      if index + shift <= #scale and index + shift > 0 then -- ensure shifted value is not outside of 0 - 127 MIDI note range
+        return scale[index + shift] + r
+      else
+        return scale[index] + r
       end
     end,
     get_fixed_velocity = function(self)
@@ -419,10 +417,10 @@ Track.msg_type = {
 -- set start/end channel apart for channel shift register
 -- set start/end output apart for midi output shift register
 -- set msg_type to 1 for note output, 2 for cc output
-local track1 = Track:create('track 1', 1, 4, 1, 1, 1)
-local track2 = Track:create('track 2', 1, 4, 1, 1, 1)
-local track3 = Track:create('track 3', 1, 4, 1, 1, 1)
-local track4 = Track:create('track 4', 1, 4, 1, 1, 1)
+local track1 = Track:create('track 1', 1, 1, 1, 1, 1)
+local track2 = Track:create('track 2', 2, 2, 1, 1, 1)
+local track3 = Track:create('track 3', 3, 3, 1, 1, 1)
+local track4 = Track:create('track 4', 4, 4, 1, 1, 1)
 
 local Tracks = {
   track1,

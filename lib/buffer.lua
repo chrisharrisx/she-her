@@ -35,6 +35,8 @@ Buffer.loop_types = {
 }
 
 Buffer.length = 64
+Buffer.start = 1
+Buffer.start_changed = 0
 Buffer.loop = 0
 Buffer.read_write_positions = { 1, 1, 1, 1 }
 Buffer.loop_type = 0
@@ -50,15 +52,22 @@ function Buffer.write_buffer(track, event)
 end
 
 function Buffer.read_buffer(track)
-  return Buffer[track][Buffer.read_write_positions[track]]
+  -- print(track, Buffer.read_write_positions[track], Buffer.start)
+  return Buffer[track][Buffer.read_write_positions[track] + Buffer.start - 1]
 end
 
-function Buffer.advance(track)
-  if Buffer.read_write_positions[track] < Buffer.length then
-    Buffer.read_write_positions[track] = Buffer.read_write_positions[track] + 1
-  else
-    Buffer.read_write_positions[track] = 1
-  end
+function Buffer.advance(track, state)
+
+    if Buffer.read_write_positions[track] < Buffer.length then
+      Buffer.read_write_positions[track] = Buffer.read_write_positions[track] + 1
+    else
+      Buffer.read_write_positions[track] = 1
+    end
+  
+end
+
+function Buffer.get_read_position(track)
+  return Buffer.read_write_positions[track]
 end
 
 function Buffer.getPulsesForTrack(track)
