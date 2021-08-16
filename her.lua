@@ -55,92 +55,46 @@ function init()
   params:set("clock_tempo", state.globals.get_tempo())
 
   clock.run(tick, 1)
-  clock.run(tick, 2)
-  clock.run(tick, 3)
-  clock.run(tick, 4)
+  -- clock.run(tick, 2)
+  -- clock.run(tick, 3)
+  -- clock.run(tick, 4)
   
   -- midi_in.event = midi_event
 end
 
--- printed = false
-
 function tick(trackNum)
   while true do
     clock.sync(state.tracks[trackNum]:get_division_value())
-  
-    if state.globals.chain() == 1 and trackNum == 1 then
-      -- chain mode
-      local chain_position = state.globals.get_chain_position()
-      local active_track = state.tracks[chain_position]
+    
+    if state.buffer.loop == 0 then
+      for i = 1, #state.tracks do
+        read_from_track(i)
+      end
       
-      -- print('chain position:' .. chain_position, 'active track position:' .. active_track:get_position())
-      
-      if state.buffer.loop == 0 then
-        if active_track:get_position() == active_track:get_length() then
-          if chain_position < #state.tracks then
-            state.globals.set_chain_position(chain_position + 1)
-          else
-            state.globals.set_chain_position(1)
-          end
+      if state.tracks[state.globals.get_chain_position()]:get_position() == 1 then
+        if state.globals.get_chain_position() < #state.tracks then
+          state.globals.set_chain_position(state.globals.get_chain_position() + 1)
+        else
+          state.globals.set_chain_position(1)
         end
-      elseif state.buffer.loop == 1 then
-        -- print('current track: ' .. chain_position, 'position: ' .. active_track:get_position())
-        -- if active_track:get_position() == state.buffer.length then
-        --   if chain_position < #state.tracks then
-        --     state.globals.set_chain_position(chain_position + 1)
-        --   else
-        --     state.globals.set_chain_position(1)
-        --   end          
-        -- end
       end
-      
-      -- if (state.buffer.loop == 0 and state.buffer.length >= active_track:get_length() and active_track:get_position() == active_track:get_length()) or
-      --   (state.buffer.loop == 1 and state.buffer.length < active_track:get_length() and state.buffer.get_read_position(chain_position) == state.buffer.length) then
-      --   if chain_position < #state.tracks then
-      --     state.globals.set_chain_position(chain_position + 1)
-      --   else
-      --     state.globals.set_chain_position(1)
-      --   end
-      -- end
-      
-      buffer_string = ''
-      
-      if state.buffer.loop == 0 then
-        read_from_track(chain_position)
-      else
-        -- if not printed then
-        --   printed = true
-          
-        --   for i = 1, #state.buffer do
-        --     buffer_string = buffer_string .. "{"
-        --     for j = 1, #state.buffer[i] do
-        --       buffer_string = buffer_string .. "{"
-        --       for k = 1, #state.buffer[i][j] do
-        --         buffer_string = buffer_string .. state.buffer[i][j][k]
-        --       end
-        --       buffer_string = buffer_string .. "}"
-        --     end
-        --     buffer_string = buffer_string .. "}"
-        --     print(buffer_string)
-        --     buffer_string = ''
-        --   end
-        -- end
-        
-        read_from_buffer(chain_position)
-      end
-    elseif state.globals.chain() == 0 then
-      -- normal mode
-      if state.buffer.loop == 0 then
-        read_from_track(trackNum)
-      else
-        read_from_buffer(trackNum)
+    else
+      for i = 1, #state.tracks do
+        read_from_buffer(i)
       end
     end
+      
     redraw()
   end
 end
 
 function read_from_track(trackNum)
+  if state.globals.chain() == 1 and trackNum ~= state.globals.get_chain_position() then
+    state.buffer.write_buffer(trackNum, {})
+    state.buffer.advance(trackNum, state)
+    return
+  end
+  
   position = state.tracks[trackNum]:get_position()
   octave_position = state.tracks[trackNum]:get_octave_position()
   trig = state.tracks[trackNum]:get_steps()[position]
@@ -152,37 +106,43 @@ function read_from_track(trackNum)
   out = state.tracks[trackNum].midi_output
   
   if trig == true and math.random(100) <= state.tracks[trackNum]:get_trig_probability() then
+    -- CHANNEL SHIFT REGISTER
     if state.tracks[trackNum].midi_channel < state.tracks[trackNum].midi_end_channel then
       state.tracks[trackNum].midi_channel = state.tracks[trackNum].midi_channel + 1
     else
       state.tracks[trackNum].midi_channel = state.tracks[trackNum].midi_start_channel
     end
     
+    -- MIDI OUTPUT SHIFT REGISTER
     if state.tracks[trackNum].midi_output < state.tracks[trackNum].midi_end_output then
       state.tracks[trackNum].midi_output = state.tracks[trackNum].midi_output + 1
     else
       state.tracks[trackNum].midi_output = state.tracks[trackNum].midi_start_output
     end
     
-    if state.tracks[trackNum]:get_play_mode() == play_chord and state.tracks[trackNum]:get_chord() ~= 1 then
-      notes = state.tracks[trackNum]:get_notes(state)
-      for i = 1, #notes do
+
+      -- OUTPUT MIDI
+      if state.tracks[trackNum]:get_play_mode() == play_chord and state.tracks[trackNum]:get_chord() ~= 1 then
+        notes = state.tracks[trackNum]:get_notes(state)
+        for i = 1, #notes do
+          if state.tracks[trackNum].send == 1 then
+            midi_connections[state.tracks[trackNum].midi_output]:note_on(notes[i], velocity, channel)
+          else
+            -- midi_out1:cc(23, notes[i], 1)
+          end
+        end
+        state.buffer.write_buffer(trackNum, { notes, velocity, channel, out })
+      else
+        note_to_play = state.tracks[trackNum]:get_notes(state)
+        state.buffer.write_buffer(trackNum, { note_to_play, velocity, channel, out })
         if state.tracks[trackNum].send == 1 then
-          midi_connections[state.tracks[trackNum].midi_output]:note_on(notes[i], velocity, channel)
+          midi_connections[state.tracks[trackNum].midi_output]:note_on(note_to_play, velocity, channel)
         else
-          -- midi_out1:cc(23, notes[i], 1)
+          -- midi_out1:cc(23, note_to_play, 1)
         end
       end
-      state.buffer.write_buffer(trackNum, { notes, velocity, channel, out })
-    else
-      note_to_play = state.tracks[trackNum]:get_notes(state)
-      state.buffer.write_buffer(trackNum, { note_to_play, velocity, channel, out })
-      if state.tracks[trackNum].send == 1 then
-        midi_connections[state.tracks[trackNum].midi_output]:note_on(note_to_play, velocity, channel)
-      else
-        -- midi_out1:cc(23, note_to_play, 1)
-      end
-    end
+
+    
   else
     state.buffer.write_buffer(trackNum, {})
   end
@@ -255,7 +215,8 @@ function key(n, z)
   state.alt = z
   state.keys[n] = z
   if state.keys[1] == 1 and state.keys[2] == 1 and state.keys[3] == 1 then
-    Buffer.clear()
+    state.reset = clock.run(state.tracks.reset, state.reset)
+    -- Buffer.clear()
     return
   end
   if z ~= 1 and state.keys[1] ~= 1 and state.buffer.start_changed ~= 1 then

@@ -100,4 +100,20 @@ function Buffer.clear()
   end
 end
 
+function Buffer.print()
+  for i = 1, #state.buffer do
+    buffer_string = buffer_string .. "{"
+    for j = 1, #state.buffer[i] do
+      buffer_string = buffer_string .. "{"
+      for k = 1, #state.buffer[i][j] do
+        buffer_string = buffer_string .. state.buffer[i][j][k]
+      end
+      buffer_string = buffer_string .. "}"
+    end
+    buffer_string = buffer_string .. "}"
+    print(buffer_string)
+    buffer_string = ''
+  end
+end
+
 return Buffer
