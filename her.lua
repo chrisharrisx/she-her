@@ -5,10 +5,13 @@
 
 local er = require 'er'
 
+-- thanks to @tehn, @justmat
+--
+
 local Tracks = include('lib/tracks')
-local View = include('lib/view')
 local Globals = include('lib/globals')
 local Buffer = include('lib/buffer')
+local View = include('lib/view')
 
 local do_enc_action = include('lib/enc')
 local do_key_action = include('lib/key')
@@ -49,15 +52,17 @@ local division, chord, velocity_randomization = 2, 2, 2
 local trig_probability = 3
 local note_randomization, play_chord = 4, 4
 
-started_chaining = false
+function rerun()
+  norns.script.load(norns.state.script)
+end
 
 function init()
+  print('she/her')
+  
+  -- state.globals.loadstate(1) -- TODO read the default slot to load from file instead of hard-coding
   params:set("clock_tempo", state.globals.get_tempo())
 
   clock.run(tick, 1)
-  -- clock.run(tick, 2)
-  -- clock.run(tick, 3)
-  -- clock.run(tick, 4)
   
   -- midi_in.event = midi_event
 end
@@ -215,8 +220,7 @@ function key(n, z)
   state.alt = z
   state.keys[n] = z
   if state.keys[1] == 1 and state.keys[2] == 1 and state.keys[3] == 1 then
-    state.reset = clock.run(state.tracks.reset, state.reset)
-    -- Buffer.clear()
+    state.reset = clock.run(state.tracks.reset, state.reset) -- sync read heads
     return
   end
   if z ~= 1 and state.keys[1] ~= 1 and state.buffer.start_changed ~= 1 then

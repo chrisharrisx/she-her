@@ -1,6 +1,7 @@
 local Track = {}
 local ChordUtil = include('lib/chord_util')
 local HarmonyUtil = include('lib/harmony_util')
+local MusicUtil = require "musicutil"
 
 local stepParams, steps, rootNote, octaveSteps, fixedVelocity, arpUp, multiple = 1, 1, 1, 1, 1, 1, 1
 local octaveParams, div, chord, shiftAmount, maxVelocity, arpDown, degree = 2, 2, 2, 2, 2, 2, 2
@@ -35,13 +36,17 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
       },
       {
         title = 'shift',
-        track_shift = 8,
+        track_shift = 13,
+        chord_track_shift = 8,
         position = 1,
         length = 16,
         preset = 0,
         values = {
-          { {0,8}, {0,8}, {0,8}, {0,8}, {0,8}, {0,8}, {0,8}, {0,8}, {0,8}, {0,8}, {0,8}, {0,8}, {0,8}, {0,8}, {0,8}, {0,8} }, -- shift steps
+          { {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13} }, -- shift steps
           8
+        },
+        chord_values = {
+          {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}, {0,13}
         }
       },
       {
@@ -117,29 +122,72 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
       return self.paramSets[velocityParams]
     end,
     get_track_shift = function(self)
-      return self.paramSets[octaveParams].track_shift
+      if self:get_chord() > 2 then
+        return self.paramSets[octaveParams].chord_track_shift
+      else
+        return self.paramSets[octaveParams].track_shift
+      end
     end,
     set_track_shift = function(self, s)
-      self.paramSets[octaveParams].track_shift = s
+      if self:get_chord() > 2 then
+        self.paramSets[octaveParams].chord_track_shift = s
+        for i = 1, #self.paramSets[octaveParams].chord_values do
+          if self.paramSets[octaveParams].chord_values[i][multiple] == 0 then
+            self.paramSets[octaveParams].chord_values[i][degree] = s
+          end
+        end
+      else
+        self.paramSets[octaveParams].track_shift = s
+        for i = 1, #self.paramSets[octaveParams].values[octaveSteps] do
+          if self.paramSets[octaveParams].values[octaveSteps][i][multiple] == 0 then
+            self.paramSets[octaveParams].values[octaveSteps][i][degree] = s
+          end
+        end
+      end
     end,
     get_octave_step = function(self, oct)
-      return self.paramSets[octaveParams].values[octaveSteps][oct][multiple]
+      if self.paramSets[noteParams].values[chord] > 2 then
+        return self.paramSets[octaveParams].chord_values[oct][multiple]
+      else
+        return self.paramSets[octaveParams].values[octaveSteps][oct][multiple]
+      end
     end,
     set_octave_step = function(self, oct, mult, d)
-      self.paramSets[octaveParams].values[octaveSteps][oct][multiple] = mult
-      self.paramSets[octaveParams].values[octaveSteps][oct][degree] = d
+      if self:get_chord() > 2 then
+        self.paramSets[octaveParams].chord_values[oct][multiple] = mult
+        self.paramSets[octaveParams].chord_values[oct][degree] = d
+      else
+        self.paramSets[octaveParams].values[octaveSteps][oct][multiple] = mult
+        self.paramSets[octaveParams].values[octaveSteps][oct][degree] = d
+      end
     end,
     get_shift_step_degree = function(self, oct)
-      return self.paramSets[octaveParams].values[octaveSteps][oct][degree]
+      if self.paramSets[noteParams].values[chord] > 2 then
+        return self.paramSets[octaveParams].chord_values[oct][degree]
+      else
+        return self.paramSets[octaveParams].values[octaveSteps][oct][degree]
+      end
     end,
     set_shift_step_degree = function(self, oct, d)
-      self.paramSets[octaveParams].values[octaveSteps][oct][degree] = d
+      if self.paramSets[noteParams].values[chord] > 2 then
+        self.paramSets[octaveParams].chord_values[oct][degree] = d
+      else
+        self.paramSets[octaveParams].values[octaveSteps][oct][degree] = d
+      end
     end,
     get_shift_step_multiple = function(self, step)
-      return self.paramSets[octaveParams].values[octaveSteps][step][multiple]
+      if self.paramSets[noteParams].values[chord] > 2 then
+        return self.paramSets[octaveParams].chord_values[step][multiple]
+      else
+        return self.paramSets[octaveParams].values[octaveSteps][step][multiple]
+      end
     end,
     set_shift_step_multiple = function(self, step, m)
-      self.paramSets[octaveParams].values[octaveSteps][step][multiple] = m
+      if self.paramSets[noteParams].values[chord] > 2 then
+        self.paramSets[octaveParams].chord_values[step][multiple] = m
+      else
+        self.paramSets[octaveParams].values[octaveSteps][step][multiple] = m
+      end
     end,
     get_octave_length = function(self)
       return self.paramSets[octaveParams].length
@@ -149,26 +197,40 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
       self.paramSets[octaveParams].length = len
     end,
     set_octave_steps = function(self, state, d)
+      default_value = self:get_track_shift()
+      
       if d < 0 then
         self:set_shift_preset(0)
-        for i = 1, #self.paramSets[octaveParams].values[octaveSteps] do
-          val = self:get_octave_step(i)
-          if val >= 1 then
-            self:set_octave_step(i, val + d, 8)
-          elseif val <= -1 then
-            self:set_octave_step(i, val - d, 8)
-          end
-        end
+        t = self:get_chord() > 2 and self.paramSets[octaveParams].chord_values or self.paramSets[octaveParams].values[octaveSteps]
+        self:delete_octave_steps(state, d, default_value, t)
       else
         self:set_shift_preset(util.clamp(self:get_shift_preset() + d, 0, #Track.shift_presets))
-        self.paramSets[octaveParams].values[octaveSteps] = nil
-        p = self:get_shift_preset()
-        temp = {}
-        for i = 1, #Track.shift_presets[p] do
-          table.insert(temp, { Track.shift_presets[p][i], self:get_track_shift() })
+        if self:get_chord() > 2 then
+          self.paramSets[octaveParams].chord_values = nil
+          self.paramSets[octaveParams].chord_values = self:get_preset_steps()
+        else
+          self.paramSets[octaveParams].values[octaveSteps] = nil
+          self.paramSets[octaveParams].values[octaveSteps] = self:get_preset_steps()
         end
-        self.paramSets[octaveParams].values[octaveSteps] = temp
       end
+    end,
+    delete_octave_steps = function(self, state, d, default_value, target)
+      for i = 1, #target do
+        val = self:get_octave_step(i)
+        if val >= 1 then
+          self:set_octave_step(i, val + d, default_value)
+        elseif val <= -1 then
+          self:set_octave_step(i, val - d, default_value)
+        end
+      end
+    end,
+    get_preset_steps = function(self)
+      p = self:get_shift_preset()
+      temp = {}
+      for i = 1, #Track.shift_presets[p] do
+        table.insert(temp, { Track.shift_presets[p][i], self:get_track_shift() })
+      end
+      return temp
     end,
     get_shift_preset = function(self)
       return self.paramSets[octaveParams].preset
@@ -259,12 +321,12 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
             – a new chord if track 1 chord type AND follower chord type are not set to root or fixed  --]]
       
       if (state.active_paramSet == 3 and state.active_param ~= 3) or state.active_paramSet ~= 3  then
-        k = HarmonyUtil.getKey()
+        k = state.globals.get_key()
         r = self:get_root_note()
         c = self:get_chord()
         
         if math.random(100) <= state.globals.get_chord_chance() and c > 1 and self.title == 'track 1' then
-          change = HarmonyUtil.getRandDiatonicChordChange()
+          change = HarmonyUtil.getRandDiatonicChordChange(state)
           
           if change ~= nil then
             current_root = state.tracks[1]:get_root_note()
@@ -308,7 +370,6 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
         self:follow(state)
       end
       
-      k = HarmonyUtil.getKey()
       r = self:get_root_note()
       c = self:get_chord() -- diatonic chord
       t = self:get_play_mode() -- playback mode (arp up, arp down, arp random, chord)
@@ -346,18 +407,18 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
           return ChordUtil.getInversionForChord(notes, op_multiple)
         else -- calculate shift for note
           if c == 2 then -- calculate root note + shift
-            return self.shift_note(scale, r, k, op_degree, op_multiple)
+            return self.shift_note(r, op_degree, op_multiple)
           else -- calculate arp position + shift
-            return self.shift_arpeggio_note(scale, current_arp_position, op_degree, op_multiple, r)
+            return self.shift_arpeggio_note(scale, offsets, current_arp_position, op_degree, op_multiple, r)
           end
         end
       end
     end,
-    shift_note = function(scale, r, k, op_degree, op_multiple)
+    shift_note = function(r, op_degree, op_multiple)
       shift = (op_degree - 1) * op_multiple
       return r + shift
     end,
-    shift_arpeggio_note = function(scale, current_arp_position, op_degree, op_multiple, r)
+    shift_arpeggio_note = function(scale, offsets, current_arp_position, op_degree, op_multiple, r)
       index = 0
       for i = 1, #scale do
         if scale[i] == offsets[current_arp_position] then

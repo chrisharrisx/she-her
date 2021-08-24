@@ -1,3 +1,0 @@
-local ExternalIO = {}
-
-return ExternalIO

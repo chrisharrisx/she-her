@@ -1,6 +1,8 @@
 local er = require 'er'
 
 local ChordUtil = include('lib/chord_util')
+local HarmonyUtil = include('lib/harmony_util')
+local MusicUtil = require('musicutil')
 
 --   state.tempo = util.clamp(state.global.tempo + d, 30, 300)
 --   params:set('clock_tempo', state.global.tempo)
@@ -83,7 +85,11 @@ local enc_actions = {
         end,
         function(state, d) -- set shift degree for all shift steps
           track_shift = active_track:get_track_shift()
-          track_shift = util.clamp(track_shift + d, 2, 8)
+          if active_track:get_chord() > 2 then
+            track_shift = util.clamp(track_shift + d, 2, 8)
+          else
+            track_shift = util.clamp(track_shift + d, 2, 13)
+          end
           active_track:set_track_shift(track_shift)
         end
       },
@@ -163,7 +169,11 @@ local enc_actions = {
           else
             active_track = state.tracks[state.active_track]
             degree = active_track:get_shift_step_degree(state.active_octave_step)
-            active_track:set_shift_step_degree(state.active_octave_step, util.clamp(degree + d, 2, 8))
+            if active_track:get_chord() > 2 then
+              active_track:set_shift_step_degree(state.active_octave_step, util.clamp(degree + d, 2, 8))
+            else
+              active_track:set_shift_step_degree(state.active_octave_step, util.clamp(degree + d, 2, 13)) ------------------------------------------------------
+            end
           end
         end,
         function(state, d)
@@ -228,15 +238,35 @@ local enc_actions = {
     {-- encoder = 2
       {-- paramSet = 1
         function(state, d) -- choose paramSet
-          state.paramSet = util.clamp(state.paramSet + d, 1, #state.globals.paramSets[sequenceParams].params)
+          state.paramSet = util.clamp(state.paramSet + d, 1, #state.globals.paramSets[harmonyParams].params)
         end,
         function(state, d)
           follow = state.globals.get_follow_state()
           follow = util.clamp(follow + d, 0, 1)
+          
+          if follow == 1 then
+            state.globals.set_track_notes(state)
+          end
+          if follow == 0 then
+            print('found table with length 4')
+            state.globals.restore_track_notes(state)
+          end
+          
           state.globals.set_follow_state(follow)
         end
       },
-      {-- paramSet = 2
+      {-- paramSet = 2    set key
+        function(state, d) end,
+        function(state, d)
+          k = state.globals.get_key()
+          k = util.clamp(k + d, 60, 71)
+          state.globals.set_key(k)
+        end
+      },
+      {-- paramSet = 3    key modulation
+        
+      },
+      {-- paramSet = 4    chord modulation
         function(state, d) end,
         function(state, d)
           c = state.globals.get_chord_chance()
@@ -247,6 +277,24 @@ local enc_actions = {
           f = state.globals.get_chord_interval()
           f = util.clamp(f + d, 0, 64)
           state.globals.set_chord_interval(f)
+        end
+      }
+    }
+  },
+  {-- VIEW 6 - she - external io edit
+    
+  },
+  {-- VIEW 7 - she - save/load edit
+    {-- encoder 1
+      
+    },
+    {-- encoder 2
+      {-- paramSet 1 - save
+        function(state, d) end,
+        function(state, d)
+          s = state.globals.save_slot
+          s = util.clamp(s + d, 1, 8)
+          state.globals.save_slot = s
         end
       }
     }

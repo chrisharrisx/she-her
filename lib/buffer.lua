@@ -101,6 +101,8 @@ function Buffer.clear()
 end
 
 function Buffer.print()
+  buffer_string = ''  
+  
   for i = 1, #state.buffer do
     buffer_string = buffer_string .. "{"
     for j = 1, #state.buffer[i] do
@@ -110,10 +112,10 @@ function Buffer.print()
       end
       buffer_string = buffer_string .. "}"
     end
-    buffer_string = buffer_string .. "}"
-    print(buffer_string)
-    buffer_string = ''
+    buffer_string = buffer_string .. "}\n"
   end
+  
+  return buffer_string
 end
 
 return Buffer

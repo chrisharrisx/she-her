@@ -1,4 +1,6 @@
 local ChordUtil = include('lib/chord_util')
+local HarmonyUtil = include('lib/harmony_util')
+local MusicUtil = require('musicutil')
 
 local View = {}
 
@@ -124,16 +126,16 @@ function View.displayOctaveParams(state, active_track)
   end
   
   -- shift amount
-  amount = ChordUtil.shifts[7]
+  amount = active_track:get_chord() > 2 and ChordUtil.chord_shifts[active_track:get_track_shift() - 1] or ChordUtil.shifts[active_track:get_track_shift() - 1]
   if state.active_octave_step ~= 0 then
-    amount = ChordUtil.shifts[active_track:get_shift_step_degree(state.active_octave_step) - 1]
+    amount = active_track:get_chord() > 2 and ChordUtil.chord_shifts[active_track:get_shift_step_degree(state.active_octave_step) - 1]  or ChordUtil.shifts[active_track:get_shift_step_degree(state.active_octave_step) - 1]
   end
   screen.move(90, 20)
   if not (state.paramSet == 2 and state.active_paramSet == 2 and state.active_param == 3) then
     screen.level(2)
   else
     screen.level(15)
-    amount = ChordUtil.shifts[active_track:get_track_shift() - 1]
+    amount = active_track:get_chord() > 2 and ChordUtil.chord_shifts[active_track:get_track_shift() - 1] or ChordUtil.shifts[active_track:get_track_shift() - 1]
   end
   screen.text(amount)
   
@@ -303,15 +305,54 @@ function View.harmonyEdit(state)
   current_x = x_start
   current_y = 20
   screen.move(current_x, current_y)
-  -- random chord changes
+  -- key / transpose
   screen.level(state.paramSet == 2 and state.active_paramSet == 1 and state.active_param == 1 and 15 or 2)
-  screen.text('chord mod')
+  screen.text('key')
 
   current_x = 58
   screen.move(current_x, current_y)
-  -- chance of chord chance
-  ch = state.globals.get_chord_chance()
+  k = state.globals.get_key()
   screen.level(state.paramSet == 2 and state.active_paramSet == 2 and state.active_param == 2 and 15 or 2)
+  screen.text(MusicUtil.note_num_to_name(k))
+  
+  current_x = x_start
+  current_y = 30
+  screen.move(current_x, current_y)
+  -- chance of key change
+  screen.level(state.paramSet == 3 and state.active_paramSet == 1 and state.active_param == 1 and 15 or 2)
+  screen.text('key mod')
+  
+  current_x = 58
+  screen.move(current_x, current_y)
+  -- chance of key change
+  -- ch = state.globals.get_chord_chance()
+  kch = 0
+  screen.level(state.paramSet == 3 and state.active_paramSet == 3 and state.active_param == 2 and 15 or 2)
+  screen.text('%' .. kch)
+  
+  current_x = 90
+  screen.move(current_x, current_y)
+  -- frequency of key change
+  -- cf = state.globals.get_chord_interval()
+  -- cf = cf == 0 and 'x' or cf
+  cf = 'x'
+  screen.level(2)
+  screen.text('every ')
+  screen.level(state.paramSet == 3 and state.active_paramSet == 3 and state.active_param == 3 and 15 or 2)
+  screen.text(cf)
+  
+  current_x = x_start
+  current_y = 40
+  screen.move(current_x, current_y)
+  -- random chord changes
+  screen.level(state.paramSet == 4 and state.active_paramSet == 1 and state.active_param == 1 and 15 or 2)
+  screen.text('chord mod')
+  
+  current_x = 58
+  screen.move(current_x, current_y)
+  -- chance of chord change
+  ch = state.globals.get_chord_chance()
+  screen.level(state.paramSet == 4 and state.active_paramSet == 4 and state.active_param == 2 and 15 or 2)
   screen.text('%' .. ch)
   
   current_x = 90
@@ -321,23 +362,23 @@ function View.harmonyEdit(state)
   cf = cf == 0 and 'x' or cf
   screen.level(2)
   screen.text('every ')
-  screen.level(state.paramSet == 2 and state.active_paramSet == 2 and state.active_param == 3 and 15 or 2)
+  screen.level(state.paramSet == 4 and state.active_paramSet == 4 and state.active_param == 3 and 15 or 2)
   screen.text(cf)
   
   screen.update()
 end
 
-function View.loopEdit(state)
-  screen.clear()
+-- function View.loopEdit(state)
+--   screen.clear()
   
-  current_x = x_start
-  current_y = y_start
-  screen.move(current_x, current_y)
-  screen.level(state.paramSet == 3 and state.active_paramSet == 1 and state.active_param == 1 and 15 or 2)
-  screen.text('loop settings')
+--   current_x = x_start
+--   current_y = y_start
+--   screen.move(current_x, current_y)
+--   screen.level(state.paramSet == 3 and state.active_paramSet == 1 and state.active_param == 1 and 15 or 2)
+--   screen.text('loop settings')
   
-  screen.update()
-end
+--   screen.update()
+-- end
 
 function View.externalEdit(state)
   screen.clear()
@@ -347,6 +388,41 @@ function View.externalEdit(state)
   screen.move(current_x, current_y)
   screen.level(state.paramSet == 4 and state.active_paramSet == 1 and state.active_param == 1 and 15 or 2)
   screen.text('external io settings')
+  
+  screen.update()
+end
+
+function View.saveLoadEdit(state)
+  screen.clear()
+  
+  current_x = x_start
+  current_y = y_start
+  screen.move(current_x, current_y)
+  screen.level(state.paramSet == 1 and state.active_paramSet == 1 and state.active_param == 1 and 15 or 2)
+  screen.text('save')
+  
+  screen.move(58, current_y)
+  screen.level(state.paramSet == 1 and state.active_paramSet == 1 and state.active_param == 2 and 15 or 2)
+  screen.text('slot ' .. state.globals.save_slot)
+  
+  screen.update()
+end
+
+function View.confirmSave(state)
+  screen.clear()
+  
+  current_x = x_start
+  current_y = 20
+  screen.move(current_x, current_y)
+  
+  screen.level(4)
+  screen.font_face(13)
+  screen.font_size(16)
+  screen.text('confirm save?')
+  screen.font_face(1) -- reset
+  screen.font_size(8)
+  screen.move(current_x, 40)
+  screen.text('k2 to confirm, k3 to cancel')
   
   screen.update()
 end
@@ -372,8 +448,9 @@ View.views = {
   View.she,
   View.sequenceEdit,
   View.harmonyEdit,
-  View.loopEdit,
-  View.externalEdit
+  View.externalEdit,
+  View.saveLoadEdit,
+  View.confirmSave
 }
 
 return View

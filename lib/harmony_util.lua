@@ -2,37 +2,29 @@ local ChordUtil = include('lib/chord_util')
 
 local HarmonyUtil = {}
 
-HarmonyUtil.key = 60
 HarmonyUtil.diatonicChords = {
-  { 60, 3 }, -- I
-  { 62, 4 }, -- ii
-  { 64, 5 }, -- iii
-  { 65, 6 }, -- IV
-  { 67, 7 }, -- V
-  { 69, 8 }, -- vi
-  { 71, 9 }, -- vii
-  { 60, 10 }, -- I maj7
-  { 62, 11 }, -- ii min7
-  { 64, 12 }, -- iii min7
-  { 65, 13 }, -- IV maj7
-  { 67, 14 }, -- V dom7
-  { 69, 15 }, -- vi min7
-  { 71, 16 }, -- vii min7b5
-  { 60, 17 }, -- I maj9
-  { 65, 18 } -- I maj7#11
+  { 0, 3 }, -- I
+  { 2, 4 }, -- ii
+  { 4, 5 }, -- iii
+  { 5, 6 }, -- IV
+  { 7, 7 }, -- V
+  { 9, 8 }, -- vi
+  { 11, 9 }, -- vii
+  { 0, 10 }, -- I maj7
+  { 2, 11 }, -- ii min7
+  { 4, 12 }, -- iii min7
+  { 5, 13 }, -- IV maj7
+  { 7, 14 }, -- V dom7
+  { 9, 15 }, -- vi min7
+  { 11, 16 }, -- vii min7b5
+  { 0, 17 }, -- I maj9
+  { 5, 18 } -- I maj7#11
 }
 
-function HarmonyUtil.getKey()
-  return HarmonyUtil.key
-end
-
-function HarmonyUtil.setKey(key)
-  HarmonyUtil.key = key
-end
-
-function HarmonyUtil.getRandDiatonicChordChange(index) 
+function HarmonyUtil.getRandDiatonicChordChange(state) 
   choice = math.random(#HarmonyUtil.diatonicChords)
-  return HarmonyUtil.diatonicChords[choice]
+  new_chord = HarmonyUtil.diatonicChords[choice]
+  return { state.globals.get_key() + new_chord[1], new_chord[2] }
 end
 
 return HarmonyUtil

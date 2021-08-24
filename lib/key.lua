@@ -143,7 +143,7 @@ local key_actions = {
       end
     }
   },
-  {-- VIEW 6 - she - edit loop settings
+  {-- VIEW 6 - she - edit external io settings
     {-- key = 1
       
     },
@@ -157,7 +157,7 @@ local key_actions = {
       
     }
   },
-  {-- VIEW 7 - she - edit external io settings
+  {-- VIEW 7 - she - save/load settings
     {-- key = 1
       
     },
@@ -165,12 +165,44 @@ local key_actions = {
       function(state)
         state.view = 3
         state.key = 0
+      end,
+      function(state)
+        state.view = 8
+        state.key = 0
       end
     },
     {-- key = 3
-      
+      function(state)
+        state.active_paramSet = state.paramSet
+        state.active_param = 2
+        state.key = 0
+      end,
     }
-  } 
+  },
+  {-- VIEW 8 - she - confirm save
+    {-- key = 1
+      
+    },
+    {-- key = 2
+      function(state) end,
+      function(state)
+        state.globals.confirm_save(state)
+        state.active_paramSet = state.paramSet
+        state.active_param = 1
+        state.view = 3
+        state.key = 0
+      end
+    },
+    {-- key = 3
+      function(state) end,
+      function(state)
+        state.active_paramSet = state.paramSet
+        state.active_param = 1
+        state.view = 3
+        state.key = 0
+      end
+    }
+  }
 }
 
 function do_key_action(state, n)
