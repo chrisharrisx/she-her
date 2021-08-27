@@ -2,7 +2,9 @@ local note = 1
 local velocity = 2
 local track = 3
 
-local Buffer = {
+local Buffer = {}
+
+Buffer.data = {
   {
     {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
     {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
@@ -43,17 +45,17 @@ Buffer.loop_type = 0
 
 function Buffer.write_buffer(track, event)
   if #event ~= 0 then
-    table.remove(Buffer[track], Buffer.read_write_positions[track])
-    table.insert(Buffer[track], Buffer.read_write_positions[track], event)
+    table.remove(Buffer.data[track], Buffer.read_write_positions[track])
+    table.insert(Buffer.data[track], Buffer.read_write_positions[track], event)
   else
-    table.remove(Buffer[track], Buffer.read_write_positions[track])
-    table.insert(Buffer[track], Buffer.read_write_positions[track], {})
+    table.remove(Buffer.data[track], Buffer.read_write_positions[track])
+    table.insert(Buffer.data[track], Buffer.read_write_positions[track], {})
   end
 end
 
 function Buffer.read_buffer(track)
   -- print(track, Buffer.read_write_positions[track], Buffer.start)
-  return Buffer[track][Buffer.read_write_positions[track] + Buffer.start - 1]
+  return Buffer.data[track][Buffer.read_write_positions[track] + Buffer.start - 1]
 end
 
 function Buffer.advance(track, state)
@@ -72,8 +74,8 @@ end
 
 function Buffer.getPulsesForTrack(track)
   count = 0
-  for i = 1, #Buffer[track] do
-    if Buffer[track][i] then
+  for i = 1, #Buffer.data[track] do
+    if Buffer.data[track][i] then
       count = count + 1
     end
   end
@@ -81,39 +83,59 @@ function Buffer.getPulsesForTrack(track)
 end
 
 function Buffer.setPulsesForTrack(trackNum, steps)
-  table.remove(Buffer, trackNum)
-  table.insert(Buffer, trackNum, steps)
+  table.remove(Buffer.data, trackNum)
+  table.insert(Buffer.data, trackNum, steps)
 end
 
 function Buffer.clear()
-  start = Buffer.length + 1
+  start = Bufferlength + 1
   length = 64
   
   if start < length then
-    for k = 1, #Buffer do
+    for k = 1, #Buffer.data do
       for j = start, length do
-        for i = 1, #Buffer[k][j] do 
-          Buffer[k][j][i] = nil 
+        for i = 1, #Buffer.data[k][j] do 
+          Buffer.data[k][j][i] = nil 
         end
       end
     end
   end
 end
 
-function Buffer.print()
-  buffer_string = ''  
+function Buffer.load_buffer(new_buffer)
+  Buffer.data = nil 
+  Buffer.data = {}
   
-  for i = 1, #state.buffer do
-    buffer_string = buffer_string .. "{"
-    for j = 1, #state.buffer[i] do
-      buffer_string = buffer_string .. "{"
-      for k = 1, #state.buffer[i][j] do
-        buffer_string = buffer_string .. state.buffer[i][j][k]
+  for i = 1, #new_buffer do
+    Buffer.data[i] = {} -- track
+    for j = 1, #new_buffer[i] do
+      Buffer.data[i][j] = {} -- step
+      for k = 1, #new_buffer[i][j] do
+        Buffer.data[i][j][k] = new_buffer[i][j][k] -- values
       end
-      buffer_string = buffer_string .. "}"
     end
-    buffer_string = buffer_string .. "}\n"
+  end  
+  
+end
+
+function Buffer.print()
+  buffer_string = '{'  
+  
+  for i = 1, #Buffer.data do
+    buffer_string = buffer_string .. "{" -- track
+    
+    for j = 1, #Buffer.data[i] do
+      buffer_string = buffer_string .. "{"
+      for k = 1, #Buffer.data[i][j] do
+        buffer_string = buffer_string .. Buffer.data[i][j][k] .. ','
+      end
+      buffer_string = buffer_string .. "},"
+    end
+    
+    buffer_string = buffer_string .. "},"
   end
+  
+  buffer_string = buffer_string .. '}'
   
   return buffer_string
 end

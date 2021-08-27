@@ -1,3 +1,5 @@
+tracks = include('lib/tracks')
+
 local key_actions = {
   {-- VIEW 1 - her - track selection
     {-- key = 1
@@ -48,7 +50,7 @@ local key_actions = {
         state.key = 0
       end,
       function(state)
-        active_track = state.tracks[state.active_track]
+        active_track = tracks[state.active_track]
         if state.active_param <= #active_track.paramSets[state.active_paramSet].values then -- move through params in set
           state.active_param = state.active_param + 1
         end
@@ -106,7 +108,7 @@ local key_actions = {
           state.active_paramSet = 1
           state.active_param = 2
         else
-          state.reset = clock.run(state.tracks.reset, state.reset)
+          state.reset = clock.run(tracks.reset, state.reset)
         end
         state.key = 0
       end

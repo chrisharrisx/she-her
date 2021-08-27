@@ -1,3 +1,6 @@
+buffer = include('lib/buffer')
+tracks = include('lib/tracks')
+
 local er = require 'er'
 
 local ChordUtil = include('lib/chord_util')
@@ -9,18 +12,19 @@ local MusicUtil = require('musicutil')
 
 function set_loop_state(state, d)
   clock.sync(1)
-  state.buffer.loop = util.clamp(state.buffer.loop + d, 0, 1)
+  buffer.loop = util.clamp(buffer.loop + d, 0, 1)
+  buffer.print()
   clock.cancel(state.sync)
   state.sync = 0
 end
 
 function set_loop_length(state, d)
-  state.buffer.length = util.clamp(state.buffer.length + d, 1, 64)
+  buffer.length = util.clamp(buffer.length + d, 1, 64)
 end
 
 function set_loop_start(state, d)
-  state.buffer.start = util.clamp(state.buffer.start + d, 1, 64 - state.buffer.length)
-  state.buffer.start_changed = 1
+  buffer.start = util.clamp(buffer.start + d, 1, 64 - buffer.length)
+  buffer.start_changed = 1
 end
 
 local enc_actions = {
@@ -31,7 +35,7 @@ local enc_actions = {
     {-- encoder = 2 
       {-- paramSet = 1 
         function(state, d) -- param = 1
-          state.active_track = util.clamp(state.active_track + d, 1, #state.tracks)
+          state.active_track = util.clamp(state.active_track + d, 1, #tracks)
         end
       }
     }
@@ -46,7 +50,7 @@ local enc_actions = {
           state.paramSet = util.clamp(state.paramSet + d, 1, #active_track.paramSets)
         end,
         function(state, d) -- set pulses
-          active_track = state.tracks[state.active_track]
+          active_track = tracks[state.active_track]
           numSteps = active_track:get_length()
           numPulses = active_track:get_pulses()
           
@@ -62,12 +66,12 @@ local enc_actions = {
           end
         end,
         function(state, d) -- set division
-          active_track = state.tracks[state.active_track]
+          active_track = tracks[state.active_track]
           div = active_track:get_division()
           active_track:set_division(util.clamp(div + d, 1, #active_track.divisions))
         end,
         function(state, d) -- set trig probability
-          active_track = state.tracks[state.active_track]
+          active_track = tracks[state.active_track]
           prob = active_track:get_trig_probability()
           active_track:set_trig_probability(util.clamp(prob + d, 0, 100))
         end
@@ -96,12 +100,12 @@ local enc_actions = {
       {-- notes
         function(state, d) end,
         function(state, d) -- edit root note
-          active_track = state.tracks[state.active_track]
+          active_track = tracks[state.active_track]
           rootNote = active_track:get_root_note()
           active_track:set_root_note(util.clamp(rootNote + d, 0, 127))
         end,
         function(state, d) -- edit chord
-          active_track = state.tracks[state.active_track]
+          active_track = tracks[state.active_track]
           ch = active_track:get_chord()
           new_ch = util.clamp(ch + d, 1, #ChordUtil.chords)
           active_track:set_chord(new_ch)
@@ -110,7 +114,7 @@ local enc_actions = {
           end
         end,
         function(state, d) -- edit chord type
-          active_track = state.tracks[state.active_track]
+          active_track = tracks[state.active_track]
           ct = active_track:get_play_mode()
           active_track:set_play_mode(util.clamp(ct + d, 1, #ChordUtil.playMode))
         end
@@ -118,17 +122,17 @@ local enc_actions = {
       {-- velocity
         function(state, d) end,
         function(state, d) -- edit fixed velocity
-          active_track = state.tracks[state.active_track]
+          active_track = tracks[state.active_track]
           fv = active_track:get_fixed_velocity()
           active_track:set_fixed_velocity(util.clamp(fv + d, 0, 127))
         end,
         function(state, d) -- edit max velocity
-          active_track = state.tracks[state.active_track]
+          active_track = tracks[state.active_track]
           mv = active_track:get_max_velocity()
           active_track:set_max_velocity(util.clamp(mv + d, 0, 127))
         end,
         function(state, d) -- edit velocity randomization
-          active_track = state.tracks[state.active_track]
+          active_track = tracks[state.active_track]
           vr = active_track:get_velocity_randomization()
           active_track:set_velocity_randomization(util.clamp(vr + d, 0, 100))
         end
@@ -139,14 +143,14 @@ local enc_actions = {
         function(state, d) end,
         function(state, d) -- set step length
           if state.alt == 0 then -- set step length for active track only
-            active_track = state.tracks[state.active_track]
+            active_track = tracks[state.active_track]
             numSteps = active_track:get_length()
             if numSteps + d <= 16 and numSteps + d > 0 then
               active_track:set_steps(er.gen(active_track:get_pulses(), numSteps + d, 0))
             end
           else -- set step length for all tracks simultaneously
-            for i = 1, #state.tracks do
-              active_track = state.tracks[i]
+            for i = 1, #tracks do
+              active_track = tracks[i]
               numSteps = active_track:get_length()
               if numSteps + d <= 16 and numSteps + d > 0 then
                 active_track:set_steps(er.gen(active_track:get_pulses(), numSteps + d, 0))
@@ -167,7 +171,7 @@ local enc_actions = {
               state.active_octave_step = active_track:get_octave_length()
             end
           else
-            active_track = state.tracks[state.active_track]
+            active_track = tracks[state.active_track]
             degree = active_track:get_shift_step_degree(state.active_octave_step)
             if active_track:get_chord() > 2 then
               active_track:set_shift_step_degree(state.active_octave_step, util.clamp(degree + d, 2, 8))
@@ -183,12 +187,12 @@ local enc_actions = {
       {-- notes
         function(state, d) end,
         function(state, d)
-          active_track = state.tracks[state.active_track]
+          active_track = tracks[state.active_track]
           root = active_track:get_root_note()
           if d > 0 then
-            state.tracks[state.active_track]:set_root_note(root + 12)
+            tracks[state.active_track]:set_root_note(root + 12)
           else
-            state.tracks[state.active_track]:set_root_note(root - 12)
+            tracks[state.active_track]:set_root_note(root - 12)
           end
         end
       }

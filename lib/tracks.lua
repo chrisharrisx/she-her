@@ -1,3 +1,5 @@
+local er = require 'er'
+
 local Track = {}
 local ChordUtil = include('lib/chord_util')
 local HarmonyUtil = include('lib/harmony_util')
@@ -73,6 +75,30 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
     set_steps = function(self, s)
       self.paramSets[stepParams].values[steps] = s
     end,
+    print_steps = function(self)
+      stepvalues = '{'
+      for i = 1, #self.paramSets[stepParams].values[steps] do
+        stepvalue = self.paramSets[stepParams].values[steps][i] and 1 or 0
+        stepvalues = stepvalues .. stepvalue .. ','
+      end
+      stepvalues = stepvalues .. '}'
+      return stepvalues
+    end,
+    restore_steps = function(self, p)
+      self.paramSets[stepParams].values[steps] = nil
+      self.paramSets[stepParams].values[steps] = {}
+      
+      count = 0
+      for i = 1, #p do
+        if p[i] == 0 then
+          self.paramSets[stepParams].values[steps][i] = false
+        else
+          self.paramSets[stepParams].values[steps][i] = true
+          count = count + 1
+        end
+      end
+      self:set_pulses(count)
+    end,
     get_length = function(self)
       return #self.paramSets[stepParams].values[steps]
     end,
@@ -108,6 +134,9 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
     end,
     set_rotation = function(self, rotate)
       self.paramSets[stepParams].rotation = rotate
+    end,
+    apply_rotation = function(self, rotate)
+      self:set_steps(er.gen(self:get_pulses(), self:get_length(), rotate))
     end,
     get_stepParams = function(self)
       return self.paramSets[stepParams]

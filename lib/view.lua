@@ -1,3 +1,6 @@
+buffer = include('lib/buffer')
+tracks = include('lib/tracks')
+
 local ChordUtil = include('lib/chord_util')
 local HarmonyUtil = include('lib/harmony_util')
 local MusicUtil = require('musicutil')
@@ -12,10 +15,10 @@ local current_y = y_start
 function View.her(state)
   screen.clear()
   
-  for i = 1, #state.tracks do
+  for i = 1, #tracks do
     screen.move(x_start, 10 * i)
     screen.level(i == state.active_track and 15 or 2)
-    screen.text(state.tracks[i].title)
+    screen.text(tracks[i].title)
   end
   
   current_x = 65
@@ -42,7 +45,7 @@ end
 function View.trackEdit(state)
   current_x = x_start
   current_y = y_start
-  active_track = state.tracks[state.active_track]
+  active_track = tracks[state.active_track]
   screen.clear()
   screen.move(x_start, 10)
   
@@ -432,13 +435,13 @@ function View.displayTouringParams(state)
   current_y = 60
   screen.move(current_x, current_y)
   screen.level(2)
-  screen.text('len: ' .. state.buffer.length)
+  screen.text('len: ' .. buffer.length)
   
   screen.move(40, current_y)
-  screen.text('start: ' .. state.buffer.start)
+  screen.text('start: ' .. buffer.start)
   
   screen.move(90, current_y)
-  loop = state.buffer.loop == 1 and 'on' or 'off'
+  loop = buffer.loop == 1 and 'on' or 'off'
   screen.text('loop: ' .. loop)
 end
 
