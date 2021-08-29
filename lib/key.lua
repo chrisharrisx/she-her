@@ -1,4 +1,5 @@
 tracks = include('lib/tracks')
+buffer = include('lib/buffer')
 
 local key_actions = {
   {-- VIEW 1 - her - track selection

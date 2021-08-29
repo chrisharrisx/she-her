@@ -441,8 +441,7 @@ function View.displayTouringParams(state)
   screen.text('start: ' .. buffer.start)
   
   screen.move(90, current_y)
-  loop = buffer.loop == 1 and 'on' or 'off'
-  screen.text('loop: ' .. loop)
+  screen.text('loop: ' .. buffer.loop_states[buffer.loop + 1])
 end
 
 View.views = {

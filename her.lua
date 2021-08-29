@@ -73,7 +73,7 @@ function tick(trackNum)
   while true do
     clock.sync(tracks[trackNum]:get_division_value())
     
-    if buffer.loop == 0 then
+    if buffer.loop < 2 then
       for i = 1, #tracks do
         read_from_track(i)
       end
@@ -96,7 +96,7 @@ function tick(trackNum)
 end
 
 function read_from_track(trackNum)
-  if state.globals.chain() == 1 and trackNum ~= state.globals.get_chain_position() then
+  if state.globals.chain() == 1 and trackNum ~= state.globals.get_chain_position() and buffer.loop == 1 then
     buffer.write_buffer(trackNum, {})
     buffer.advance(trackNum, state)
     return
@@ -138,10 +138,14 @@ function read_from_track(trackNum)
             -- midi_out1:cc(23, notes[i], 1)
           end
         end
-        buffer.write_buffer(trackNum, { notes, velocity, channel, out })
+        if buffer.loop == 1 then
+          buffer.write_buffer(trackNum, { notes, velocity, channel, out })
+        end
       else
         note_to_play = tracks[trackNum]:get_notes(state)
-        buffer.write_buffer(trackNum, { note_to_play, velocity, channel, out })
+        if buffer.loop == 1 then
+          buffer.write_buffer(trackNum, { note_to_play, velocity, channel, out })
+        end
         if tracks[trackNum].send == 1 then
           midi_connections[tracks[trackNum].midi_output]:note_on(note_to_play, velocity, channel)
         else
@@ -151,10 +155,14 @@ function read_from_track(trackNum)
 
     
   else
-    buffer.write_buffer(trackNum, {})
+    if buffer.loop == 1 then
+      buffer.write_buffer(trackNum, {})
+    end
   end
   
-  buffer.advance(trackNum, state)
+  if buffer.loop == 1 then
+    buffer.advance(trackNum, state)
+  end
   tracks[trackNum]:set_position(position < tracks[trackNum]:get_length() and position + 1 or 1)
   tracks[trackNum]:set_octave_position(octave_position < tracks[trackNum]:get_octave_length() and octave_position + 1 or 1)
   
@@ -209,8 +217,8 @@ function read_from_buffer(trackNum)
   end
   
   buffer.advance(trackNum, state)
-  tracks[trackNum]:set_position(position < tracks[trackNum]:get_length() and position + 1 or 1)
-  tracks[trackNum]:set_octave_position(octave_position < tracks[trackNum]:get_octave_length() and octave_position + 1 or 1)
+  -- tracks[trackNum]:set_position(position < tracks[trackNum]:get_length() and position + 1 or 1)
+  -- tracks[trackNum]:set_octave_position(octave_position < tracks[trackNum]:get_octave_length() and octave_position + 1 or 1)
 end
 
 function redraw()
@@ -225,11 +233,40 @@ function key(n, z)
     state.reset = clock.run(tracks.reset, state.reset) -- sync read heads
     return
   end
+  
+  if state.keys[1] == 1 and (n == 3 or n == 2) then
+    if state.alt == 0 and state.sync == 0 then
+      state.sync = clock.run(set_loop_state, n, z)
+    end
+  end
+  
   if z ~= 1 and state.keys[1] ~= 1 and buffer.start_changed ~= 1 then
     do_key_action(state, n)
   end
   buffer.start_changed = 0
   redraw()
+end
+
+function set_loop_state(n, z)
+  print('in here')
+  clock.sync(1)
+  if state.keys[1] == 1 and n == 3 and z == 0 then
+    if buffer.loop < 2 then
+      buffer.loop = buffer.loop + 1
+    else
+      buffer.loop = 0
+    end
+  end
+  
+  if state.keys[1] == 1 and n == 2 and z == 0 then
+    if buffer.loop > 0 then
+      buffer.loop = buffer.loop - 1
+    else
+      buffer.loop = 2
+    end
+  end
+  clock.cancel(state.sync)
+  state.sync = 0
 end
 
 function enc(n, d)

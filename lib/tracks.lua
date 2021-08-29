@@ -358,7 +358,7 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
           change = HarmonyUtil.getRandDiatonicChordChange(state)
           
           if change ~= nil then
-            current_root = state.tracks[1]:get_root_note()
+            current_root = Tracks[1]:get_root_note()
             current_octave = ChordUtil.getOctaveOfRoot(current_root)
             new_root = change[1]
             new_octave = ChordUtil.getOctaveOfRoot(new_root)
@@ -385,7 +385,7 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
       new_octave = ChordUtil.getOctaveOfRoot(new_root)
       octave_diff = current_octave - new_octave
       
-      if self:get_chord() > 2 and state.tracks[1]:get_chord() > 2 then
+      if self:get_chord() > 2 and Tracks[1]:get_chord() > 2 then
         ct = state.track_1_chord
         self:set_chord(ct)
         scale = ChordUtil.getScaleForChord(ct)
@@ -507,12 +507,12 @@ Track.msg_type = {
 -- set start/end channel apart for channel shift register
 -- set start/end output apart for midi output shift register
 -- set msg_type to 1 for note output, 2 for cc output
-local track1 = Track:create('track 1', 1, 1, 1, 1, 1)
-local track2 = Track:create('track 2', 2, 2, 1, 1, 1)
-local track3 = Track:create('track 3', 3, 3, 1, 1, 1)
-local track4 = Track:create('track 4', 4, 4, 1, 1, 1)
+track1 = Track:create('track 1', 1, 1, 1, 1, 1)
+track2 = Track:create('track 2', 2, 2, 1, 1, 1)
+track3 = Track:create('track 3', 3, 3, 1, 1, 1)
+track4 = Track:create('track 4', 4, 4, 1, 1, 1)
 
-local Tracks = {
+Tracks = {
   track1,
   track2,
   track3,

@@ -31,17 +31,15 @@ Buffer.data = {
   }
 }
 
-Buffer.loop_types = {
-  'clip',
-  'regen'
-}
-
 Buffer.length = 64
+
+Buffer.loop = 0
+Buffer.loop_states = {'off', 'rec', 'on'}
+
 Buffer.start = 1
 Buffer.start_changed = 0
-Buffer.loop = 0
+
 Buffer.read_write_positions = { 1, 1, 1, 1 }
-Buffer.loop_type = 0
 
 function Buffer.write_buffer(track, event)
   if #event ~= 0 then

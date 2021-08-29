@@ -11,11 +11,22 @@ local MusicUtil = require('musicutil')
 --   params:set('clock_tempo', state.global.tempo)
 
 function set_loop_state(state, d)
-  clock.sync(1)
-  buffer.loop = util.clamp(buffer.loop + d, 0, 1)
-  buffer.print()
-  clock.cancel(state.sync)
-  state.sync = 0
+  -- clock.sync(1)
+  -- loop_state = buffer.loop
+  
+  -- if d > 1 and loop_state < 2 then
+  --   loop_state = loop_state + 1
+  -- elseif d > 1 and loop_state == 2 then
+  --   loop_state = 0
+  -- elseif d < 1 and loop_state > 0 then
+  --   loop_state = loop_state - 1
+  -- elseif d < 1 and loop_state == 0 then
+  --   loop_state = 2
+  -- end
+  
+  -- buffer.loop = loop_state
+  -- clock.cancel(state.sync)
+  -- state.sync = 0
 end
 
 function set_loop_length(state, d)
@@ -57,7 +68,7 @@ local enc_actions = {
           if state.alt == 0 then
             if numPulses + d >= 0 and numPulses + d <= 16 then
               active_track:set_pulses(numPulses + d)
-              active_track:set_steps(er.gen(numPulses + d, numSteps, 0))
+              active_track:set_steps(er.gen(numPulses + d, numSteps, active_track:get_rotation()))
             end
           else
             rotation = active_track:get_rotation()
