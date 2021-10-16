@@ -11,21 +11,28 @@ local MusicUtil = require('musicutil')
 --   params:set('clock_tempo', state.global.tempo)
 
 function set_loop_state(state, d)
-  clock.sync(1)
-  buffer.loop = util.clamp(buffer.loop + d, 0, 1)
-  buffer.print()
-  clock.cancel(state.sync)
-  state.sync = 0
+  buffer.loop_next = util.clamp(buffer.loop + d, 0, 1)
+  buffer.loop_state_dirty = 1
+end
+
+function set_loop_slot(d)
+  buffer.active_slot = util.clamp(buffer.active_slot + d, 1, 4)
+  -- buffer.loop_slot_dirty = 1
 end
 
 function set_loop_length(state, d)
-  buffer.length = util.clamp(buffer.length + d, 1, 64)
+  buffer.slot_lengths[buffer.active_slot] = util.clamp(buffer.slot_lengths[buffer.active_slot] + d, 1, 16)
+  buffer.length_changed = 1
 end
 
 function set_loop_start(state, d)
-  buffer.start = util.clamp(buffer.start + d, 1, 64 - buffer.length)
+  buffer.start = util.clamp(buffer.start + d, 1, 16 - buffer.length)
   buffer.start_changed = 1
 end
+
+-- function store_loop_state()
+  
+-- end
 
 local enc_actions = {
   {-- VIEW 1 - her - track selection
@@ -268,7 +275,17 @@ local enc_actions = {
         end
       },
       {-- paramSet = 3    key modulation
-        
+        function(state, d) end,
+        function(state, d)
+          k = state.globals.get_keymod_chance()
+          k = util.clamp(k + d, 0, 100)
+          state.globals.set_keymod_chance(k)
+        end,
+        function(state, d)
+          k = state.globals.get_keymod_interval()
+          k = util.clamp(k + d, 0, 64)
+          state.globals.set_keymod_interval(k)
+        end
       },
       {-- paramSet = 4    chord modulation
         function(state, d) end,
@@ -286,7 +303,68 @@ local enc_actions = {
     }
   },
   {-- VIEW 6 - she - external io edit
-    
+    {-- encoder 1
+      
+    },
+    {-- encoder 2
+      {-- paramSet = 1
+        function(state, d) -- choose paramSet
+          state.paramSet = util.clamp(state.paramSet + d, 1, #state.globals.paramSets[harmonyParams].params)
+        end,
+        function(state, d)
+          tracks[state.external].send = util.clamp(tracks[state.external].send + d, 1, 5)
+        end,
+        function(state, d)
+          if tracks[state.external].send == 2 then
+            tracks[state.external].cc_num = util.clamp(tracks[state.external].cc_num + d, 1, 127)
+          elseif tracks[state.external].send == 3 or tracks[state.external].send == 4 then
+            tracks[state.external].crow_out = util.clamp(tracks[state.external].crow_out + d, 1, 4)
+          end
+        end
+      },
+      {-- paramSet = 2
+        function(state, d) end,
+        function(state, d)
+          tracks[state.external].midi_start_output = util.clamp(tracks[state.external].midi_start_output + d, 1, 4)
+          if tracks[state.external].midi_end_output < tracks[state.external].midi_start_output then
+            tracks[state.external].midi_end_output = tracks[state.external].midi_start_output
+          end
+        end,
+        function(state, d)
+          tracks[state.external].midi_end_output = util.clamp(tracks[state.external].midi_end_output + d, 1, 4)
+          if tracks[state.external].midi_end_output < tracks[state.external].midi_start_output then
+            tracks[state.external].midi_start_output = tracks[state.external].midi_end_output
+          end
+        end,
+      },
+      {-- paramSet = 3
+        function(state, d) end,
+        function(state, d)
+          tracks[state.external].midi_start_channel = util.clamp(tracks[state.external].midi_start_channel + d, 1, 16)
+          if tracks[state.external].midi_end_channel < tracks[state.external].midi_start_channel then
+            tracks[state.external].midi_end_channel = tracks[state.external].midi_start_channel
+          end
+        end,
+        function(state, d)
+          tracks[state.external].midi_end_channel = util.clamp(tracks[state.external].midi_end_channel + d, 1, 16)
+          if tracks[state.external].midi_end_channel < tracks[state.external].midi_start_channel then
+            tracks[state.external].midi_start_channel = tracks[state.external].midi_end_channel
+          end
+        end,
+      },
+      {-- paramSet = 4
+        function(state, d) end,
+        function(state, d)
+          tracks[state.external].midi_input_port = util.clamp(tracks[state.external].midi_input_port + d, 0, 4)
+        end,
+        function(state, d)
+          tracks[state.external].midi_input_chan = util.clamp(tracks[state.external].midi_input_chan + d, 1, 16)
+        end,
+      }
+    },
+    {-- encoder 3
+
+    }
   },
   {-- VIEW 7 - she - save/load edit
     {-- encoder 1
@@ -307,15 +385,19 @@ local enc_actions = {
 
 function do_enc_action(state, n, d)
   if n == 1 then
-    if state.alt == 0 and state.sync == 0 then
-      state.sync = clock.run(set_loop_state, state, d)
+    if state.alt == 0 then
+      set_loop_state(state, d)
     elseif state.alt == 1 and state.key == 1 then
-      set_loop_length(state, d)
+      set_loop_slot(d)
     elseif state.alt == 1 and state.key == 2 then
+      set_loop_length(state, d)
+    elseif state.alt == 1 and state.key == 3 then
       set_loop_start(state, d)
     end
+  elseif n == 3 and state.view == 6 then
+    state.external = util.clamp(state.external + d, 1, 4)
   else
-    handler = state.active_paramSet == 2 and 1 or state.active_param
+    -- handler = state.active_paramSet == 2 and 1 or state.active_param
     enc_actions[state.view][n][state.active_paramSet][state.active_param](state, d)
   end
 end

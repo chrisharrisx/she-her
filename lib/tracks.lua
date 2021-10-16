@@ -1,3 +1,5 @@
+buffer = include('lib/buffer')
+
 local er = require 'er'
 
 local Track = {}
@@ -6,7 +8,7 @@ local HarmonyUtil = include('lib/harmony_util')
 local MusicUtil = require "musicutil"
 
 local stepParams, steps, rootNote, octaveSteps, fixedVelocity, arpUp, multiple = 1, 1, 1, 1, 1, 1, 1
-local octaveParams, div, chord, shiftAmount, maxVelocity, arpDown, degree = 2, 2, 2, 2, 2, 2, 2
+local octaveParams, shiftParams, div, chord, shiftAmount, maxVelocity, arpDown, degree = 2, 2, 2, 2, 2, 2, 2, 2
 local noteParams, trig_prob, play_mode, velocityRandomization, arpRand = 3, 3, 3, 3, 3
 local velocityParams, inversion, noArp = 4, 4, 4
 
@@ -23,7 +25,12 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
     midi_output = start_out,
     midi_start_output = start_out,
     midi_end_output = end_out,
+    midi_input_port = 0,
+    midi_input_chan = 1,
     send = msg_type,
+    cc_num = 1,
+    crow_out = 1,
+    engine = '',
     paramSets = {
       {
         title = 'steps',
@@ -66,7 +73,8 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
           64, -- fixed velocity
           127, -- max velocity for randomization
           0 -- velocity randomization
-        }
+        },
+        mute = 0
       }
     },
     get_steps = function(self)
@@ -74,6 +82,12 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
     end,
     set_steps = function(self, s)
       self.paramSets[stepParams].values[steps] = s
+    end,
+    get_step = function(self, s)
+      return self.paramSets[stepParams].values[steps][s]
+    end,
+    set_step = function(self, s)
+      self.paramSets[stepParams].values[steps][s] = not self.paramSets[stepParams].values[steps][s]
     end,
     print_steps = function(self)
       stepvalues = '{'
@@ -137,6 +151,50 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
     end,
     apply_rotation = function(self, rotate)
       self:set_steps(er.gen(self:get_pulses(), self:get_length(), rotate))
+    end,
+    print_shift_steps = function(self)
+      shiftsteps = '{'
+      for i = 1, #self.paramSets[shiftParams].values[steps] do
+        shiftsteps = shiftsteps .. '{'
+          for j = 1, #self.paramSets[shiftParams].values[steps][i] do
+            shiftsteps = shiftsteps .. self.paramSets[shiftParams].values[steps][i][j] .. ','
+          end
+        shiftsteps = shiftsteps .. '},'
+      end
+      shiftsteps = shiftsteps .. '}'
+      return shiftsteps
+    end,
+    restore_shift_steps = function(self, s)
+      self.paramSets[shiftParams].values[steps] = {}
+      
+      for i = 1, #s do
+        self.paramSets[shiftParams].values[steps][i] = {}
+        for j = 1, #s[i] do
+          self.paramSets[shiftParams].values[steps][i][j] = s[i][j]
+        end
+      end
+    end,
+    print_chordshift_steps = function(self)
+      shiftsteps = '{'
+      for i = 1, #self.paramSets[shiftParams].chord_values do
+        shiftsteps = shiftsteps .. '{'
+          for j = 1, #self.paramSets[shiftParams].chord_values[i] do
+            shiftsteps = shiftsteps .. self.paramSets[shiftParams].chord_values[i][j] .. ','
+          end
+        shiftsteps = shiftsteps .. '},'
+      end
+      shiftsteps = shiftsteps .. '}'
+      return shiftsteps
+    end,
+    restore_chordshift_steps = function(self, s)
+      self.paramSets[shiftParams].chord_values = {}
+      
+      for i = 1, #s do
+        self.paramSets[shiftParams].chord_values[i] = {}
+        for j = 1, #s[i] do
+          self.paramSets[shiftParams].chord_values[i][j] = s[i][j]
+        end
+      end
     end,
     get_stepParams = function(self)
       return self.paramSets[stepParams]
@@ -354,26 +412,54 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
         r = self:get_root_note()
         c = self:get_chord()
         
-        if math.random(100) <= state.globals.get_chord_chance() and c > 1 and self.title == 'track 1' then
+        changed = false
+        change = nil
+        
+        -- print('key=' .. MusicUtil.note_num_to_name(k), 'root=' .. MusicUtil.note_num_to_name(r), 'chord=' .. ChordUtil.getChordNameForNumber(c))
+        
+        if math.random(100) <= state.globals.get_keymod_chance() then
+          print('', '', '', '', '', 'possible key change ....', r, k)
+          -- key change takes priority because it also determines new chord
+          if MusicUtil.note_num_to_name(r) == MusicUtil.note_num_to_name(k) and #ChordUtil.modulations[1] > 0 then
+            print('changing key!', k, r, c)
+            modulation = ChordUtil.modulations[1][math.random(#ChordUtil.modulations[1])]
+            change = {}
+            change[2] = modulation[2] -- new chord
+            change[1] = r -- root does not change
+            state.globals.set_key(k + modulation[1])
+            print('new key: ' .. state.globals.get_key())
+            changed = true
+          end
+        else
+          -- print(r, k)
+        end
+        
+        if not changed and math.random(100) <= state.globals.get_chord_chance() and c > 1 and self.title == 'track 1' then
           change = HarmonyUtil.getRandDiatonicChordChange(state)
+        end
+        
+        if change ~= nil then
+          chan = '{'
+          for i = 1, #change do
+            chan = chan .. change[i] .. ','
+          end
+          chan = chan .. '}'
+          -- print(chan)
+          current_root = tracks[1]:get_root_note()
+          current_octave = ChordUtil.getOctaveOfRoot(current_root)
+          new_root = change[1]
+          new_octave = ChordUtil.getOctaveOfRoot(new_root)
+          octave_diff = current_octave - new_octave
           
-          if change ~= nil then
-            current_root = state.tracks[1]:get_root_note()
-            current_octave = ChordUtil.getOctaveOfRoot(current_root)
-            new_root = change[1]
-            new_octave = ChordUtil.getOctaveOfRoot(new_root)
-            octave_diff = current_octave - new_octave
-            
-            n = new_root + (12 * octave_diff)
-            self:set_root_note(n)
-            state.track_1_root = new_root
-            
-            if c > 2 then
-              local ch = change[2]
-              scale = ChordUtil.getScaleForChord(ch)
-              self:set_chord(ch)
-              state.track_1_chord = ch
-            end
+          n = new_root + (12 * octave_diff)
+          self:set_root_note(n)
+          state.track_1_root = new_root
+          
+          if c > 2 then
+            local ch = change[2]
+            scale = ChordUtil.getScaleForChord(ch)
+            self:set_chord(ch)
+            state.track_1_chord = ch
           end
         end
       end
@@ -385,7 +471,7 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
       new_octave = ChordUtil.getOctaveOfRoot(new_root)
       octave_diff = current_octave - new_octave
       
-      if self:get_chord() > 2 and state.tracks[1]:get_chord() > 2 then
+      if self:get_chord() > 2 and tracks[1]:get_chord() > 2 then
         ct = state.track_1_chord
         self:set_chord(ct)
         scale = ChordUtil.getScaleForChord(ct)
@@ -479,7 +565,16 @@ function Track:create(title, start_chan, end_chan, start_out, end_out, msg_type)
     end,
     set_velocity_randomization = function(self, number)
       self.paramSets[velocityParams].values[velocityRandomization] = number
-    end
+    end,
+    toggle_mute = function(self)
+      if self.paramSets[velocityParams].mute == 0 then
+        self.paramSets[velocityParams].mute = self.paramSets[velocityParams].values[fixedVelocity]
+        self.paramSets[velocityParams].values[fixedVelocity] = 0
+      else
+        self.paramSets[velocityParams].values[fixedVelocity] = self.paramSets[velocityParams].mute
+        self.paramSets[velocityParams].mute = 0
+      end
+    end,
   }, self)
 end
 
@@ -499,18 +594,21 @@ Track.shift_presets = {
 }
 
 Track.msg_type = {
-  'note',
-  'cc'
+  'midi note',
+  'midi cc',
+  'crow cv',
+  'crow tr',
+  'engine'
 }
 
 -- Track.create(title, start_channel, end_channel, start_output, end_output, msg_type)
 -- set start/end channel apart for channel shift register
 -- set start/end output apart for midi output shift register
 -- set msg_type to 1 for note output, 2 for cc output
-local track1 = Track:create('track 1', 1, 1, 1, 1, 1)
-local track2 = Track:create('track 2', 2, 2, 1, 1, 1)
-local track3 = Track:create('track 3', 3, 3, 1, 1, 1)
-local track4 = Track:create('track 4', 4, 4, 1, 1, 1)
+local track1 = Track:create('track 1', 1, 4, 1, 1, 1)
+local track2 = Track:create('track 2', 2, 2, 2, 2, 1)
+local track3 = Track:create('track 3', 1, 1, 3, 3, 1)
+local track4 = Track:create('track 4', 1, 1, 4, 4, 2)
 
 local Tracks = {
   track1,

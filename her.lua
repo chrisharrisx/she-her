@@ -10,21 +10,32 @@ local er = require 'er'
 
 buffer = include('lib/buffer')
 tracks = include('lib/tracks')
+engine.name = 'PolyPerc'
 
 local Globals = include('lib/globals')
 local View = include('lib/view')
+local GridUtil = include('lib/grid_util')
+local MusicUtil = require "musicutil"
 
 local do_enc_action = include('lib/enc')
 local do_key_action = include('lib/key')
 
+local g = grid.connect()
+
 local midi_out1 = midi.connect(1)
 local midi_out2 = midi.connect(2)
+local midi_out3 = midi.connect(3)
+local midi_out4 = midi.connect(4)
 -- local midi_in = midi.connect(2)
 
 local midi_connections = {
   midi_out1,
-  midi_out2
+  midi_out2,
+  midi_out3,
+  midi_out4
 }
+
+local clear
 
 local state = {
   active_track = 1,
@@ -43,7 +54,8 @@ local state = {
   keys = { 0, 0, 0 },
   alt = 0,
   sync = 0, -- clock for quantizing loop on/off
-  reset = 0
+  reset = 0,
+  external = 1
 }
 
 local pulses, root, octave, fixed_velocity = 1, 1, 1, 1
@@ -58,11 +70,11 @@ end
 function init()
   print('she/her')
   
+  GridUtil.init(g)
+  
   state.globals.loadstate(1) -- TODO read saved slot to load from file instead of hard-coding
-  print(buffer.read_write_positions)
+  
   params:set("clock_tempo", state.globals.get_tempo())
-  -- metro_save = metro.init(function(stage) print(buffer.read_write_positions) end, 10)
-  -- metro_save:start()
 
   clock.run(tick, 1)
   
@@ -71,7 +83,27 @@ end
 
 function tick(trackNum)
   while true do
+    
+    GridUtil.update_trigs(g)
+    
     clock.sync(tracks[trackNum]:get_division_value())
+    
+    -- print(buffer.read_write_positions[1], (buffer.start - 1) + buffer.length)
+    
+    if buffer.loop_state_dirty == 1 and trackNum == 1 then 
+      if (buffer.loop == 0 and tracks[1]:get_position() == tracks[1]:get_length()) or 
+         (buffer.loop == 1 and buffer.read_write_positions[1] == (buffer.start - 1 + buffer.slot_lengths[buffer.active_slot])) then
+        
+        if buffer.loop == 0 and #buffer.slots[buffer.active_slot] == 0 then
+          buffer.write_slot_data()
+        end
+        
+        if buffer.loop ~= buffer.loop_next then
+          buffer.loop = buffer.loop_next
+        end
+        buffer.loop_state_dirty = 0
+      end
+    end
     
     if buffer.loop == 0 then
       for i = 1, #tracks do
@@ -134,8 +166,10 @@ function read_from_track(trackNum)
         for i = 1, #notes do
           if tracks[trackNum].send == 1 then
             midi_connections[tracks[trackNum].midi_output]:note_on(notes[i], velocity, channel)
+          elseif tracks[trackNum].send == 5 then
+            engine.hz(MusicUtil.note_num_to_freq(notes[i]))
           else
-            -- midi_out1:cc(23, notes[i], 1)
+            midi_connections[tracks[trackNum].midi_output]:cc(11, notes[i], 2)
           end
         end
         buffer.write_buffer(trackNum, { notes, velocity, channel, out })
@@ -143,9 +177,12 @@ function read_from_track(trackNum)
         note_to_play = tracks[trackNum]:get_notes(state)
         buffer.write_buffer(trackNum, { note_to_play, velocity, channel, out })
         if tracks[trackNum].send == 1 then
+          -- print(midi_connections, tracks[trackNum].midi_output)
           midi_connections[tracks[trackNum].midi_output]:note_on(note_to_play, velocity, channel)
+        elseif tracks[trackNum].send == 5 then
+          engine.hz(MusicUtil.note_num_to_freq(note_to_play))
         else
-          -- midi_out1:cc(23, note_to_play, 1)
+          midi_connections[tracks[trackNum].midi_output]:cc(11, note_to_play, 2)
         end
       end
 
@@ -185,7 +222,7 @@ function read_from_buffer(trackNum)
         if tracks[trackNum].send == 1 then
           midi_connections[out]:note_on(note[i], velocity, channel)
         else
-          -- midi_out1:cc(23, note[i], 1)
+          midi_connections[tracks[trackNum].midi_output]:cc(11, note[i], 2)
         end
       end
     else
@@ -195,14 +232,14 @@ function read_from_buffer(trackNum)
           -- midi_out1:note_on(note[arp_position], velocity, channel)
           midi_connections[out]:note_on(note[arp_position], velocity, channel)
         else
-          -- midi_out1:cc(23, note[arp_position], 1)
+          midi_connections[tracks[trackNum].midi_output]:cc(11, note[arp_position], 2)
         end
       else
         if tracks[trackNum].send == 1 then
           -- midi_out1:note_on(note, velocity, channel)
           midi_connections[out]:note_on(note, velocity, channel)
         else
-          -- midi_out1:cc(23, note, 1)
+          midi_connections[tracks[trackNum].midi_output]:cc(11, note, 2)
         end
       end
     end
@@ -221,20 +258,53 @@ function key(n, z)
   state.key = n
   state.alt = z
   state.keys[n] = z
+  
   if state.keys[1] == 1 and state.keys[2] == 1 and state.keys[3] == 1 then
     state.reset = clock.run(tracks.reset, state.reset) -- sync read heads
+    for i = 1, #state.keys do
+      state.keys[i] = 0
+    end
     return
   end
-  if z ~= 1 and state.keys[1] ~= 1 and buffer.start_changed ~= 1 then
+  
+  if z == 1 and state.keys[2] == 1 and state.keys[3] == 1 then
+    clear = metro.init(function(stage) buffer.empty_slot() end, 4)
+    clear:start()
+  end
+  if z == 0 and clear ~= nil then
+    clear:stop()
+  end
+  
+  if z ~= 1 and state.keys[1] ~= 1 and buffer.start_changed ~= 1 and buffer.length_changed ~= 1 then
     do_key_action(state, n)
   end
+  
   buffer.start_changed = 0
+  buffer.length_changed = 0
+  
   redraw()
 end
 
 function enc(n, d)
   do_enc_action(state, n, d)
   redraw()
+end
+
+function g.key(x, y, z)
+  -- g:led(x, y, state == 1 and 10 or 0)
+  -- g:refresh()
+  
+  if y == 1 and z == 0 then
+    g:led(x, y, tracks[1]:get_step(x) and 2 or 6)
+    g:refresh()
+    tracks[1]:set_step(x)
+  end
+  
+  if y == 8 and x <= 4 and z == 0 then
+    tracks[x]:toggle_mute()
+    GridUtil.update_mutes(g)
+    g:refresh()
+  end
 end
 
 function midi_event(data)

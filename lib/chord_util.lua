@@ -62,7 +62,7 @@ ChordUtil.chords = {
   
   -- extended chords
   { name = 'I9', value = { 0, 4, 7, 11, 14 }, scale = ChordUtil.scales.ionian },
-  { name = 'I9#11', value = { 0, 4, 7, 11, 18 }, scale = ChordUtil.scales.lydian },
+  { name = 'IV9#11', value = { 0, 4, 7, 11, 18 }, scale = ChordUtil.scales.lydian },
   
   -- other triads
   { name = 'aug', value = { 0, 4, 8 }, scale = ChordUtil.scales.lydian },
@@ -71,6 +71,20 @@ ChordUtil.chords = {
   -- 🍌
   { name = 'quart', value = { 0, 5, 10, 15 }, scale = ChordUtil.scales.ionian }, -- ADD QUART MAJ AND QUART MIN
   { name = 'quint', value = { 0, 7, 14, 21 }, scale = ChordUtil.scales.ionian }
+}
+
+
+ChordUtil.modulations = {
+  { -- I chord
+    {-5, 6}, -- common chord modulation, I chord --> IV chord of new key
+    {-2, 4}, -- {new key, new chord} -- modulate down whole step, I chord --> ii of new key
+  },
+  {}, -- ii chord
+  {}, -- iii chord
+  {}, -- IV chord
+  {}, -- V chord
+  {}, -- vi chord
+  {} -- vii chord
 }
 
 ChordUtil.playMode = {

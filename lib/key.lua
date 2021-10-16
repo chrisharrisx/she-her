@@ -153,10 +153,27 @@ local key_actions = {
       function(state)
         state.view = 3
         state.key = 0
+      end,
+      function(state)
+        state.active_param = state.active_param - 1
+        if state.active_param == 1 then
+          state.active_paramSet = 1
+        else
+          state.active_paramSet = state.paramSet
+        end
+        state.key = 0
       end
     },
     {-- key = 3
-      
+      function(state)
+        state.active_paramSet = state.paramSet
+        state.active_param = 2
+        state.key = 0
+      end,
+      function(state)
+        state.active_param = 3
+        state.key = 0
+      end,
     }
   },
   {-- VIEW 7 - she - save/load settings

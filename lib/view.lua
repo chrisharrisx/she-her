@@ -69,9 +69,17 @@ function View.displayStepParams(state, active_track)
   -- steps
   for i = 1, active_track:get_length() do
     if state.active_paramSet == 1 and state.active_param == 2 then
-      screen.level(i == active_track:get_position() and 3 or 8)
+      if buffer.loop == 0 then
+        screen.level(i == active_track:get_position() and 3 or 8)
+      else
+        screen.level(8)
+      end
     else
-      screen.level(i == active_track:get_position() and 7 or 2)
+      if buffer.loop == 0 then
+        screen.level(i == active_track:get_position() and 7 or 2)
+      else
+        screen.level(2)
+      end
     end
     
     screen.line_rel(0, active_track:get_steps()[i] and -6 or -2)
@@ -112,7 +120,7 @@ function View.displayOctaveParams(state, active_track)
   for i = 1, active_track:get_octave_length() do
     if i == state.active_octave_step then
       screen.level(15)
-    elseif i == active_track:get_octave_position() then
+    elseif i == active_track:get_octave_position() and buffer.loop == 0 then
       screen.level(7)
     else
       screen.level(2)
@@ -328,17 +336,15 @@ function View.harmonyEdit(state)
   current_x = 58
   screen.move(current_x, current_y)
   -- chance of key change
-  -- ch = state.globals.get_chord_chance()
-  kch = 0
+  kch = state.globals.get_keymod_chance()
   screen.level(state.paramSet == 3 and state.active_paramSet == 3 and state.active_param == 2 and 15 or 2)
   screen.text('%' .. kch)
   
   current_x = 90
   screen.move(current_x, current_y)
   -- frequency of key change
-  -- cf = state.globals.get_chord_interval()
-  -- cf = cf == 0 and 'x' or cf
-  cf = 'x'
+  cf = state.globals.get_keymod_interval()
+  cf = cf == 0 and 'x' or cf
   screen.level(2)
   screen.text('every ')
   screen.level(state.paramSet == 3 and state.active_paramSet == 3 and state.active_param == 3 and 15 or 2)
@@ -389,8 +395,87 @@ function View.externalEdit(state)
   current_x = x_start
   current_y = y_start
   screen.move(current_x, current_y)
+  screen.level(state.paramSet == 1 and state.active_paramSet == 1 and state.active_param == 1 and 15 or 2)
+  screen.text('tr ' .. state.external)
+  screen.move(23, current_y)
+  screen.text('send')
+  current_x = 60
+  screen.move(current_x, current_y)
+  screen.level(state.paramSet == 1 and state.active_paramSet == 1 and state.active_param == 2 and 15 or 2)
+  screen.text(tracks[state.external].msg_type[tracks[state.external].send])
+  if tracks[state.external].send > 1 and tracks[state.external].send < 5 then
+    current_x = 100
+    screen.move(current_x, current_y)
+    screen.level(2)
+    label = tracks[state.external].send == 2 and 'n: ' or 'out: '
+    screen.text(label)
+    value = tracks[state.external].send == 2 and tracks[state.external].cc_num or 
+            (tracks[state.external].send == 3 or tracks[state.external].send == 4) and tracks[state.external].crow_out
+    screen.level(state.paramSet == 1 and state.active_paramSet == 1 and state.active_param == 3 and 15 or 2)
+    screen.text(value)
+  end
+  current_x = x_start
+  
+  current_y = 20
+  screen.move(current_x, current_y)
+  screen.level(state.paramSet == 2 and state.active_paramSet == 1 and state.active_param == 1 and 15 or 2)
+  screen.text('tr ' .. state.external)
+  screen.move(23, current_y)
+  screen.text('port')
+  current_x = 60
+  screen.move(current_x, current_y)
+  screen.level(2)
+  screen.text('start: ')
+  screen.level(state.paramSet == 2 and state.active_paramSet == 2 and state.active_param == 2 and 15 or 2)
+  screen.text(tracks[state.external].midi_start_output)
+  current_x = 100
+  screen.move(current_x, current_y)
+  screen.level(2)
+  screen.text('end: ')
+  screen.level(state.paramSet == 2 and state.active_paramSet == 2 and state.active_param == 3 and 15 or 2)
+  screen.text(tracks[state.external].midi_end_output)
+  
+  current_y = 30
+  current_x = x_start
+  screen.move(current_x, current_y)
+  screen.level(state.paramSet == 3 and state.active_paramSet == 1 and state.active_param == 1 and 15 or 2)
+  screen.text('tr ' .. state.external)
+  screen.move(23, current_y)
+  screen.text('chan')
+  current_x = 60
+  screen.move(current_x, current_y)
+  screen.level(2)
+  screen.text('start: ')
+  screen.level(state.paramSet == 3 and state.active_paramSet == 3 and state.active_param == 2 and 15 or 2)
+  screen.text(tracks[state.external].midi_start_channel)
+  current_x = 100
+  screen.move(current_x, current_y)
+  screen.level(2)
+  screen.text('end: ')
+  screen.level(state.paramSet == 3 and state.active_paramSet == 3 and state.active_param == 3 and 15 or 2)
+  screen.text(tracks[state.external].midi_end_channel)
+  
+  current_y = 40
+  current_x = x_start
+  screen.move(current_x, current_y)
   screen.level(state.paramSet == 4 and state.active_paramSet == 1 and state.active_param == 1 and 15 or 2)
-  screen.text('external io settings')
+  screen.text('tr ' .. state.external)
+  screen.move(23, current_y)
+  screen.text('input')
+  current_x = 60
+  screen.move(current_x, current_y)
+  screen.level(2)
+  screen.text('port: ')
+  screen.move(88, current_y)
+  screen.level(state.paramSet == 4 and state.active_paramSet == 4 and state.active_param == 2 and 15 or 2)
+  screen.text(tracks[state.external].midi_input_port == 0 and 'x' or tracks[state.external].midi_input_port)
+  current_x = 100
+  screen.move(current_x, current_y)
+  screen.level(2)
+  screen.text('ch: ')
+  screen.move(121, current_y)
+  screen.level(state.paramSet == 4 and state.active_paramSet == 4 and state.active_param == 3 and 15 or 2)
+  screen.text(tracks[state.external].midi_input_chan)
   
   screen.update()
 end
@@ -435,14 +520,30 @@ function View.displayTouringParams(state)
   current_y = 60
   screen.move(current_x, current_y)
   screen.level(2)
-  screen.text('len: ' .. buffer.length)
+  screen.text('len:')
+  screen.level(6)
+  screen.text(buffer.slot_lengths[buffer.active_slot])
   
-  screen.move(40, current_y)
-  screen.text('start: ' .. buffer.start)
+  screen.move(35, current_y)
+  screen.level(2)
+  screen.text('pos:')
+  screen.level(6)
+  screen.text(buffer.start)
   
-  screen.move(90, current_y)
+  screen.move(70, current_y)
+  slot_state = #buffer.slots[buffer.active_slot] > 0 and 'º' or ''
+  screen.level(2)
+  screen.text('slot:')
+  screen.level(6)
+  screen.text(buffer.active_slot)
+  screen.text(slot_state)
+  
+  screen.move(105, current_y)
   loop = buffer.loop == 1 and 'on' or 'off'
-  screen.text('loop: ' .. loop)
+  screen.level(2)
+  screen.text('∞:')
+  screen.level(6)
+  screen.text(loop)
 end
 
 View.views = {
