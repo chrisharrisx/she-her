@@ -1,4 +1,3 @@
-buffer = include('lib/buffer')
 tracks = include('lib/tracks')
 
 sequenceParams, tempoParams, tempo, chance, _key, keyModChance = 1, 1, 1, 1, 1, 1
@@ -195,14 +194,6 @@ function Data(t)
   Globals.set_chord_chance(t.chordModChance)
   Globals.set_chord_interval(t.chordModInterval)
   
-  buffer.length = t.bufferLength
-  buffer.start = t.bufferStart
-  -- buffer.load_buffer(t.buffer)
-  buffer.load_slot(1, t.bufferSlot1Length, t.bufferSlot1)
-  buffer.load_slot(2, t.bufferSlot2Length, t.bufferSlot2)
-  buffer.load_slot(3, t.bufferSlot3Length, t.bufferSlot3)
-  buffer.load_slot(4, t.bufferSlot4Length, t.bufferSlot4)
-  
   tracks[1]:restore_steps(t.track1Trigs)
   tracks[1]:apply_rotation(t.track1TrigRotation)
   tracks[1]:set_trig_probability(t.track1TrigChance)
@@ -278,17 +269,6 @@ function Globals.savestate(slot, state)
   io.write('keyModInterval = ', Globals.get_keymod_interval(), ',\n')
   io.write('chordModChance = ', Globals.get_chord_chance(), ',\n')
   io.write('chordModInterval = ', Globals.get_chord_interval(), ',\n')
-  
-  io.write('bufferLength = ', buffer.length, ',\n')
-  io.write('bufferStart = ', buffer.start, ',\n')
-  io.write('bufferSlot1Length = ', buffer.slot_lengths[1], ',\n')
-  io.write('bufferSlot1 = ', buffer.print(1), ',\n')
-  io.write('bufferSlot2Length = ', buffer.slot_lengths[2], ',\n')
-  io.write('bufferSlot2 = ', buffer.print(2), ',\n')
-  io.write('bufferSlot3Length = ', buffer.slot_lengths[3], ',\n')
-  io.write('bufferSlot3 = ', buffer.print(3), ',\n')
-  io.write('bufferSlot4Length = ', buffer.slot_lengths[4], ',\n')
-  io.write('bufferSlot4 = ', buffer.print(4), ',\n')
   
   io.write('track1Trigs = ', tracks[1]:print_steps(), ',\n')
   io.write('track1TrigRotation = ', tracks[1]:get_rotation(), ',\n')

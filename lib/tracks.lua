@@ -1,5 +1,3 @@
-buffer = include('lib/buffer')
-
 local er = require 'er'
 
 local Track = {}

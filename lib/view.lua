@@ -1,4 +1,3 @@
-buffer = include('lib/buffer')
 tracks = include('lib/tracks')
 
 local ChordUtil = include('lib/chord_util')
@@ -37,7 +36,7 @@ function View.her(state)
   screen.font_face(1) -- reset
   screen.font_size(8)
   
-  View.displayTouringParams(state)
+  -- View.displayTouringParams(state)
   
   screen.update()
 end
@@ -69,17 +68,13 @@ function View.displayStepParams(state, active_track)
   -- steps
   for i = 1, active_track:get_length() do
     if state.active_paramSet == 1 and state.active_param == 2 then
-      if buffer.loop == 0 then
+      
         screen.level(i == active_track:get_position() and 3 or 8)
-      else
-        screen.level(8)
-      end
+
     else
-      if buffer.loop == 0 then
+      
         screen.level(i == active_track:get_position() and 7 or 2)
-      else
-        screen.level(2)
-      end
+ 
     end
     
     screen.line_rel(0, active_track:get_steps()[i] and -6 or -2)
@@ -120,7 +115,7 @@ function View.displayOctaveParams(state, active_track)
   for i = 1, active_track:get_octave_length() do
     if i == state.active_octave_step then
       screen.level(15)
-    elseif i == active_track:get_octave_position() and buffer.loop == 0 then
+    elseif i == active_track:get_octave_position() then
       screen.level(7)
     else
       screen.level(2)
@@ -522,28 +517,28 @@ function View.displayTouringParams(state)
   screen.level(2)
   screen.text('len:')
   screen.level(6)
-  screen.text(buffer.slot_lengths[buffer.active_slot])
+  screen.text('')
   
   screen.move(35, current_y)
   screen.level(2)
   screen.text('pos:')
   screen.level(6)
-  screen.text(buffer.start)
+  screen.text('')
   
   screen.move(70, current_y)
-  slot_state = #buffer.slots[buffer.active_slot] > 0 and 'º' or ''
+  -- slot_state = #buffer.slots[buffer.active_slot] > 0 and 'º' or ''
   screen.level(2)
   screen.text('slot:')
   screen.level(6)
-  screen.text(buffer.active_slot)
-  screen.text(slot_state)
+  screen.text('')
+  screen.text('')
   
   screen.move(105, current_y)
-  loop = buffer.loop == 1 and 'on' or 'off'
+  -- loop = buffer.loop == 1 and 'on' or 'off'
   screen.level(2)
-  screen.text('∞:')
+  -- screen.text('∞:')
   screen.level(6)
-  screen.text(loop)
+  screen.text('')
 end
 
 View.views = {

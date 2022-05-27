@@ -1,4 +1,3 @@
-buffer = include('lib/buffer')
 tracks = include('lib/tracks')
 
 local er = require 'er'
@@ -6,33 +5,6 @@ local er = require 'er'
 local ChordUtil = include('lib/chord_util')
 local HarmonyUtil = include('lib/harmony_util')
 local MusicUtil = require('musicutil')
-
---   state.tempo = util.clamp(state.global.tempo + d, 30, 300)
---   params:set('clock_tempo', state.global.tempo)
-
-function set_loop_state(state, d)
-  buffer.loop_next = util.clamp(buffer.loop + d, 0, 1)
-  buffer.loop_state_dirty = 1
-end
-
-function set_loop_slot(d)
-  buffer.active_slot = util.clamp(buffer.active_slot + d, 1, 4)
-  -- buffer.loop_slot_dirty = 1
-end
-
-function set_loop_length(state, d)
-  buffer.slot_lengths[buffer.active_slot] = util.clamp(buffer.slot_lengths[buffer.active_slot] + d, 1, 16)
-  buffer.length_changed = 1
-end
-
-function set_loop_start(state, d)
-  buffer.start = util.clamp(buffer.start + d, 1, 16 - buffer.length)
-  buffer.start_changed = 1
-end
-
--- function store_loop_state()
-  
--- end
 
 local enc_actions = {
   {-- VIEW 1 - her - track selection
@@ -384,17 +356,7 @@ local enc_actions = {
 }
 
 function do_enc_action(state, n, d)
-  if n == 1 then
-    if state.alt == 0 then
-      set_loop_state(state, d)
-    elseif state.alt == 1 and state.key == 1 then
-      set_loop_slot(d)
-    elseif state.alt == 1 and state.key == 2 then
-      set_loop_length(state, d)
-    elseif state.alt == 1 and state.key == 3 then
-      set_loop_start(state, d)
-    end
-  elseif n == 3 and state.view == 6 then
+  if n == 3 and state.view == 6 then
     state.external = util.clamp(state.external + d, 1, 4)
   else
     -- handler = state.active_paramSet == 2 and 1 or state.active_param
